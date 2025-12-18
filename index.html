@@ -6,81 +6,27 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
 <style>
-html, body { margin: 0; height: 100%; font-family: 'Inter', system-ui, sans-serif; }
-.map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
+.map { width:100%; height:100%; position:absolute; top:0; left:0; }
 
-#controls {
-  position: absolute; top: 10px; right: 10px; z-index: 20;
-  background: white; padding: 10px; border: 1px solid #ccc;
-  display: flex; flex-direction: column; gap: 5px;
-  border-radius: 6px;
-}
+#controls { position:absolute; top:10px; right:10px; z-index:20; background:white; padding:10px; border:1px solid #ccc; display:flex; flex-direction:column; gap:5px; border-radius:6px; }
 
-#hybridToggle {
-  position: absolute; top: 180px; right: 10px; z-index: 20;
-  background: white; padding: 8px; border: 1px solid #ccc;
-  cursor: pointer; border-radius: 6px;
-  width: 40px; height: 40px;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
-}
-#hybridToggle.active { background: #ddd; }
-#hybridToggle img { width: 24px; height: 24px; }
+#hybridToggle { position:absolute; top:180px; right:10px; z-index:20; background:white; padding:8px; border:1px solid #ccc; cursor:pointer; border-radius:6px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; transition: background 0.2s; }
+#hybridToggle.active { background:#ddd; }
+#hybridToggle img { width:24px; height:24px; }
 
-button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
+button, select, input { font:14px 'Inter', sans-serif; }
 
-#searchBox {
-  width: 200px;
-  padding: 4px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
+#searchBox { width:200px; padding:4px; border-radius:4px; border:1px solid #ccc; }
+#searchResults { position:absolute; top:38px; right:10px; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; width:200px; z-index:30; border-radius:4px; display:none; }
+.searchItem { padding:4px 6px; cursor:pointer; }
+.searchItem:hover { background:#eee; }
 
-#searchResults {
-  position: absolute;
-  top: 38px;
-  right: 10px;
-  background: white;
-  border: 1px solid #ccc;
-  max-height: 180px;
-  overflow-y: auto;
-  width: 200px;
-  z-index: 30;
-  border-radius: 4px;
-  display: none;
-}
+.route-info { position:absolute; top:50px; left:50%; transform:translateX(-50%); background:white; padding:8px 14px; border:1px solid #333; font:14px 'Inter', sans-serif; z-index:20; border-radius:6px; opacity:0.9; pointer-events:none; }
+.loading { position:absolute; top:20px; left:50%; transform:translateX(-50%); background:yellow; padding:6px 12px; border-radius:4px; z-index:40; font-weight:bold; display:none; }
 
-.searchItem {
-  padding: 4px 6px;
-  cursor: pointer;
-}
-.searchItem:hover { background: #eee; }
-
-.route-info {
-  position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-  background: white; padding: 8px 14px; border: 1px solid #333;
-  font: 14px 'Inter', system-ui, sans-serif; z-index: 20;
-  border-radius: 6px; opacity: 0.9;
-  pointer-events: none;
-}
-
-.loading {
-  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-  background: yellow; padding: 6px 12px; border-radius: 4px;
-  z-index: 40; font-weight: bold;
-  display: none;
-}
-
-.attribution-text {
-  position: absolute; bottom: 10px; right: 10px; z-index: 20;
-  background: rgba(255,255,255,0.85); padding: 6px 10px;
-  font: 12px 'Inter', system-ui, sans-serif;
-  border-radius: 6px;
-}
-
-.maptiler-logo {
-  position: absolute; left: 10px; bottom: 10px; z-index: 25;
-}
+.attribution-text { position:absolute; bottom:10px; right:10px; z-index:20; background:rgba(255,255,255,0.85); padding:6px 10px; font:12px 'Inter', sans-serif; border-radius:6px; }
+.maptiler-logo { position:absolute; left:10px; bottom:10px; z-index:25; }
 </style>
 </head>
 <body>
@@ -134,10 +80,14 @@ const loadingEl = document.getElementById('loading');
 const searchBox = document.getElementById('searchBox');
 const searchResults = document.getElementById('searchResults');
 
+const startPinUrl = 'https://api.maptiler.com/resources/icons/marker-green.png';
+const endPinUrl = 'https://api.maptiler.com/resources/icons/marker-orange.png';
+const defaultPinUrl = 'https://api.maptiler.com/resources/icons/marker-blue.png';
+
 // Initialize maps
 const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false });
 const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false });
-[mapStreets, mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
+[mapStreets,mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
 
 // Hybrid toggle
 const hybridToggleEl = document.getElementById('hybridToggle');
@@ -176,28 +126,35 @@ document.getElementById('resetRoute').onclick = ()=>{
 function updateSearchPlaceholder(){
   if(!routingEnabled) searchBox.placeholder = "Search";
   else if(routingEnabled && !startMarker) searchBox.placeholder = "Select starting location";
-  else if(routingEnabled && startMarker) searchBox.placeholder = "Select ending location";
+  else if(routingEnabled && startMarker && !endMarker) searchBox.placeholder = "Select ending location";
+  else searchBox.placeholder = "Select starting location";
 }
-updateSearchPlaceholder();
 
 // Add pin logic
 function addPin(map,lngLat,isSearch=false){
-  const m = new maplibregl.Marker({draggable: routingEnabled}).setLngLat(lngLat).addTo(map);
-  m.getElement().style.cursor = 'pointer';
+  let iconUrl = defaultPinUrl;
+  let draggable = routingEnabled;
+  if(routingEnabled && !startMarker) iconUrl = startPinUrl;
+  if(routingEnabled && startMarker && !endMarker) iconUrl = endPinUrl;
 
-  function removePin() {
+  const el = document.createElement('div');
+  el.style.backgroundImage = `url(${iconUrl})`;
+  el.style.width = '32px'; el.style.height = '32px'; el.style.backgroundSize='contain'; el.style.cursor='pointer';
+  
+  const m = new maplibregl.Marker({element: el, draggable: draggable}).setLngLat(lngLat).addTo(map);
+
+  function removePin(){
     m.remove();
     markers = markers.filter(x=>x!==m);
-    if(startMarker===m) { startMarker=null; routePoints.shift(); }
-    if(endMarker===m) { endMarker=null; routePoints.pop(); }
+    if(startMarker===m){ startMarker=null; routePoints.shift(); updateSearchPlaceholder(); }
+    if(endMarker===m){ endMarker=null; routePoints.pop(); updateSearchPlaceholder(); }
     routeInfo.style.display='none';
-    [mapStreets,mapHybrid].forEach(mp=>{
-      if(mp.getLayer('route')) mp.removeLayer('route');
-      if(mp.getSource('route')) mp.removeSource('route');
-    });
+    [mapStreets,mapHybrid].forEach(mp=>{ if(mp.getLayer('route')) mp.removeLayer('route'); if(mp.getSource('route')) mp.removeSource('route'); });
   }
 
-  m.getElement().addEventListener('click', ()=>{ removePin(); });
+  m.getElement().addEventListener('click', ()=>{
+    if(!routingEnabled || routingEnabled) removePin();
+  });
 
   if(isSearch){
     if(!routingEnabled){
@@ -206,21 +163,22 @@ function addPin(map,lngLat,isSearch=false){
     }
 
     if(routingEnabled){
-      if(!startMarker){ 
-        if(startMarker) startMarker.remove(); 
-        startMarker=m; routePoints[0]=lngLat;
-        m.getElement().style.backgroundColor='green';
-      } else { 
-        if(endMarker) endMarker.remove(); 
-        endMarker=m; routePoints[1]=lngLat; 
-        m.getElement().style.backgroundColor='orange';
-        fetchRoute(); 
-      }
+      if(!startMarker){ startMarker=m; routePoints[0]=lngLat; updateSearchPlaceholder(); }
+      else if(!endMarker){ endMarker=m; routePoints[1]=lngLat; updateSearchPlaceholder(); fetchRoute(); }
     } else {
       markers.push(m);
     }
   } else {
     markers.push(m);
+  }
+
+  if(routingEnabled){
+    m.on('dragend', ()=>{
+      const pos = [m.getLngLat().lng,m.getLngLat().lat];
+      if(startMarker===m) routePoints[0]=pos;
+      if(endMarker===m) routePoints[1]=pos;
+      if(routePoints.length===2) fetchRoute();
+    });
   }
 }
 
@@ -232,13 +190,10 @@ function clearRoute(){
   if(endMarker){ endMarker.remove(); endMarker=null; }
   routePoints=[];
   routeInfo.style.display='none';
-  [mapStreets,mapHybrid].forEach(m=>{
-    if(m.getLayer('route')) m.removeLayer('route');
-    if(m.getSource('route')) m.removeSource('route');
-  });
+  [mapStreets,mapHybrid].forEach(m=>{ if(m.getLayer('route')) m.removeLayer('route'); if(m.getSource('route')) m.removeSource('route'); });
 }
 
-// Fetch route with delayed loading
+// Fetch route
 let loadingTimer=null;
 function fetchRoute(){
   if(routePoints.length!==2) return;
@@ -264,7 +219,7 @@ function fetchRoute(){
   });
 }
 
-// Map clicks for routing
+// Map clicks
 function onMapClick(e){
   if(!routingEnabled) return;
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
@@ -288,7 +243,7 @@ searchBox.addEventListener('input', ()=>{
         results.slice(0,5).forEach(r=>{
           const div = document.createElement('div');
           div.className='searchItem';
-          div.textContent = r.display_name;
+          div.textContent=r.display_name;
           div.onclick=()=> {
             searchResults.style.display='none';
             const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
