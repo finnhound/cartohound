@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Full Map Example</title>
+<title>Cartohound Map</title>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
@@ -47,7 +47,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
 </div>
 
 <button id="downloadMap">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Map_pin_icon.svg" alt="Pin Icon">
+  <img src=defaultPinSVG alt="Pin Icon">
 </button>
 
 <div id="route-info" class="route-info" style="display:none;"></div>
@@ -263,23 +263,63 @@ searchBox.addEventListener('input', ()=>{
 document.addEventListener('click', e=> { if(!searchResults.contains(e.target) && e.target!==searchBox) searchResults.style.display='none'; });
 
 // Download map
-const downloadBtn = document.getElementById('downloadMap');
-downloadBtn.onclick = async () => {
-  const activeMap = currentStyle==='streets'?mapStreets:mapHybrid;
-  const controls = document.getElementById('controls');
-  controls.style.display='none';
-  hybridToggleEl.style.display='none';
-  searchResults.style.display='none';
-  await new Promise(r=>setTimeout(r,50));
-  const dataURL = activeMap.getCanvas().toDataURL('image/png');
-  controls.style.display='flex';
-  hybridToggleEl.style.display='flex';
+document.getElementById('downloadMap').onclick = async () => {
+  const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
+
+  // Show loading while generating image
+  loadingEl.style.display = 'block';
+  await new Promise(r => setTimeout(r, 50)); // slight delay to ensure canvas is rendered
+
+  // Get the map canvas
+  const mapCanvas = map.getCanvas();
+
+  // Create a new canvas
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = mapCanvas.width;
+  exportCanvas.height = mapCanvas.height;
+  const ctx = exportCanvas.getContext('2d');
+
+  // Draw the map itself
+  ctx.drawImage(mapCanvas, 0, 0);
+
+  // Draw pins and route layers
+  markers.forEach(m => {
+    const el = m.getElement();
+    const rect = map.getCanvas().getBoundingClientRect();
+    const pos = map.project(m.getLngLat());
+    // Draw SVG as image
+    const img = new Image();
+    const svg = new XMLSerializer().serializeToString(el.querySelector('svg'));
+    img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+    ctx.drawImage(img, pos.x - 20, pos.y - 40, 40, 40);
+  });
+
+  // Draw route if exists
+  const routeLayer = map.getSource('route');
+  if (routeLayer) {
+    const routeGeoJSON = routeLayer._data; // get route GeoJSON
+    ctx.strokeStyle = '#0074d9';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    routeGeoJSON.coordinates.forEach((coord, i) => {
+      const px = map.project({lng: coord[0], lat: coord[1]}).x;
+      const py = map.project({lng: coord[0], lat: coord[1]}).y;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+
+  // Download the PNG
   const link = document.createElement('a');
-  link.href = dataURL;
-  link.download = routingEnabled?'map_with_route.png':'map.png';
-  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  link.download = 'map.png';
+  link.href = exportCanvas.toDataURL('image/png');
+  link.click();
+  loadingEl.style.display = 'none';
 };
+
 </script>
 </body>
 </html>
+
 
