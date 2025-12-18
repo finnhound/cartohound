@@ -277,21 +277,31 @@ searchBox.addEventListener('input', ()=>{
       .then(results=>{
         searchResults.innerHTML='';
         if(!results || results.length===0) { searchResults.style.display='none'; return; }
-        results.slice(0,5).forEach(r=>{
-          const div = document.createElement('div');
-          div.className='searchItem';
-          div.textContent=r.display_name;
-          div.onclick=()=> {
-            searchResults.style.display='none';
-            const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
-            const map = currentStyle==='streets'?mapStreets:mapHybrid;
-            map.flyTo({center:lngLat, zoom:14});
-            addPin(map,lngLat,true);
-            searchBox.value='';
-            updateSearchPlaceholder();
-          };
-          searchResults.appendChild(div);
-        });
+results.slice(0,5).forEach(r => {
+  const div = document.createElement('div');
+  div.className = 'searchItem';
+  div.textContent = r.display_name;
+  div.onclick = () => {
+    searchResults.style.display = 'none';
+    const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
+    const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
+    map.flyTo({ center: lngLat, zoom: 14 });
+
+    // Determine which pin to override based on placeholder
+    if (routingEnabled && searchBox.placeholder.includes('ending location')) {
+      if (endMarker) {
+        endMarker.remove();
+        routePoints.pop();
+        endMarker = null;
+      }
+    }
+
+    addPin(map, lngLat, true); // add pin (start or end as logic dictates)
+    searchBox.value = '';
+    updateSearchPlaceholder();
+  };
+  searchResults.appendChild(div);
+});
         searchResults.style.display='block';
       });
   },300);
@@ -314,6 +324,7 @@ document.getElementById('downloadMap').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
 
 
