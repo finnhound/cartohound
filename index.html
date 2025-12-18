@@ -18,7 +18,7 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 #routingDropdown { position:relative; }
 #routingButton { width:240px; padding:8px 10px; border-radius:8px; border:1px solid #ccc; background:white; cursor:pointer; text-align:left; }
 #routingPanel { display:none; flex-direction:column; gap:6px; position:absolute; top:40px; left:0; background:rgba(255,255,255,0.95); padding:10px; border-radius:8px; border:1px solid #ccc; width:240px; }
-#routingPanel button, #routingPanel select { font:14px 'Inter', sans-serif; padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
+#routingPanel select, #routingPanel button { font:14px 'Inter', sans-serif; padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
 
 /* Hybrid & download buttons */
 #hybridToggle, #downloadMap {
@@ -47,10 +47,16 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
   <input id="searchBox" type="text" placeholder="Search"/>
   <div id="searchResults"></div>
 
+  <button id="downloadMap">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+      <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
+    </svg>
+  </button>
+
   <div id="routingDropdown">
     <div id="routingButton">Routing Options ▼</div>
     <div id="routingPanel">
-      <button id="toggleRoute">Enable Routing</button>
       <select id="mode">
         <option value="driving-car">Car</option>
         <option value="foot-walking">Walking</option>
@@ -64,13 +70,6 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 <div id="hybridToggle">
   <img src="https://raw.githubusercontent.com/finnhound/cartohound/7b3c8e14c393450a26d9d562c99016afad43d83a/stack%20(1).svg" alt="Hybrid Map Icon">
 </div>
-
-<button id="downloadMap">
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
-    <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
-  </svg>
-</button>
 
 <div id="route-info"></div>
 <div id="loading">Loading...</div>
@@ -127,12 +126,7 @@ hybridToggleEl.onclick = ()=>showHybrid(currentStyle==='streets');
 
 // --- Sync view ---
 let syncing=false;
-function syncView(src,tgt){
-  if(syncing) return; syncing=true;
-  const c=src.getCenter(), z=src.getZoom();
-  tgt.jumpTo({center:[c.lng,c.lat], zoom:z});
-  syncing=false;
-}
+function syncView(src,tgt){ if(syncing) return; syncing=true; const c=src.getCenter(), z=src.getZoom(); tgt.jumpTo({center:[c.lng,c.lat], zoom:z}); syncing=false; }
 mapStreets.on('move',()=>syncView(mapStreets,mapHybrid));
 mapHybrid.on('move',()=>syncView(mapHybrid,mapStreets));
 function saveView(){ const activeMap=currentStyle==='streets'?mapStreets:mapHybrid; const c=activeMap.getCenter(), z=activeMap.getZoom(); localStorage.setItem('mapView',JSON.stringify({center:[c.lng,c.lat], zoom:z})); }
@@ -142,6 +136,14 @@ mapStreets.on('moveend', saveView); mapHybrid.on('moveend', saveView);
 const routingButton = document.getElementById('routingButton');
 const routingPanel = document.getElementById('routingPanel');
 routingButton.onclick = ()=>{ routingPanel.style.display = routingPanel.style.display==='flex'?'none':'flex'; routingPanel.style.flexDirection='column'; };
+
+// --- Insert your previous working pin/search/routing/download JS here ---
+// copy full previous working JS (addPin, clearRoute, fetchRoute, Nominatim search, map click handlers, download) below this line
+
+</script>
+</body>
+</html>
+
 
 
 
@@ -284,4 +286,5 @@ document.getElementById('downloadMap').onclick=()=>{
 </script>
 </body>
 </html>
+
 
