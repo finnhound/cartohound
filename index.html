@@ -9,27 +9,39 @@
 html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 .map { width:100%; height:100%; position:absolute; top:0; left:0; }
 
-#controls { position:absolute; top:10px; right:10px; z-index:25; background:white; padding:10px; border:1px solid #ccc; display:flex; flex-direction:column; gap:5px; border-radius:6px; }
-#hybridToggle { position:absolute; top:180px; right:10px; z-index:20; background:white; padding:8px; border:1px solid #ccc; cursor:pointer; border-radius:6px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; transition: background 0.2s; }
-#hybridToggle.active { background:#ddd; }
-#hybridToggle img { width:24px; height:24px; }
-
-#downloadMap { position:absolute; top:130px; right:10px; z-index:20; background:white; padding:8px; border-radius:6px; border:1px solid #ccc; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
-#downloadMap svg { width:24px; height:24px; }
-
-button, select, input { font:14px 'Inter', sans-serif; }
-
-#searchBox { width:200px; padding:4px; border-radius:4px; border:1px solid #ccc; z-index:26; position:relative; }
-#searchResults { position:absolute; top:38px; right:10px; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; width:200px; z-index:30; border-radius:4px; display:none; }
-
+/* Search box */
+#searchContainer {
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:30;
+}
+#searchBox { width:220px; padding:6px; border-radius:8px; border:1px solid #ccc; }
+#searchResults { position:absolute; top:38px; right:0; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; width:220px; z-index:31; border-radius:4px; display:none; }
 .searchItem { padding:4px 6px; cursor:pointer; }
 .searchItem:hover { background:#eee; }
+
+/* Routing controls */
+#routingPanel { 
+  position:absolute; top:70px; right:10px; z-index:25; background:white; padding:10px; border:1px solid #ccc; display:flex; flex-direction:column; gap:5px; border-radius:6px; width:220px; opacity:0.95;
+}
+
+/* Buttons */
+#hybridToggle, #downloadMap {
+  position:absolute; right:10px; z-index:20; width:40px; height:40px; border-radius:6px; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; cursor:pointer; background:white;
+}
+#downloadMap { top:130px; }
+#hybridToggle { top:180px; }
+#hybridToggle.active { background:#ddd; }
+#hybridToggle img, #downloadMap svg { width:24px; height:24px; }
 
 .route-info { position:absolute; top:50px; left:50%; transform:translateX(-50%); background:white; padding:8px 14px; border:1px solid #333; font:14px 'Inter', sans-serif; z-index:25; border-radius:6px; opacity:0.9; pointer-events:none; }
 .loading { position:absolute; top:20px; left:50%; transform:translateX(-50%); background:yellow; padding:6px 12px; border-radius:4px; z-index:40; font-weight:bold; display:none; }
 
 .attribution-text { position:absolute; bottom:10px; right:10px; z-index:25; background:rgba(255,255,255,0.85); padding:6px 10px; font:12px 'Inter', sans-serif; border-radius:6px; }
 .maptiler-logo { position:absolute; left:10px; bottom:10px; z-index:25; }
+
+button, select { font:14px 'Inter', sans-serif; }
 </style>
 </head>
 <body>
@@ -37,9 +49,14 @@ button, select, input { font:14px 'Inter', sans-serif; }
 <div id="map-streets" class="map"></div>
 <div id="map-hybrid" class="map" style="display:none;"></div>
 
-<div id="controls">
+<!-- Separated search -->
+<div id="searchContainer">
   <input id="searchBox" type="text" placeholder="Search"/>
   <div id="searchResults"></div>
+</div>
+
+<!-- Routing panel -->
+<div id="routingPanel">
   <button id="toggleRoute">Enable Routing</button>
   <select id="mode">
     <option value="driving-car">Car</option>
@@ -49,6 +66,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
   <button id="resetRoute">Reset Route</button>
 </div>
 
+<!-- Buttons -->
 <div id="downloadMap" title="Download Map">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
     <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
@@ -64,7 +82,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
 <div id="loading" class="loading">Loading...</div>
 
 <div class="attribution-text">
-  MapLibre | © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors | Tiles © MapTiler
+  © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors | Tiles © MapTiler
 </div>
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
@@ -112,7 +130,7 @@ function showHybrid(isHybrid) {
 showHybrid(currentStyle==='hybrid');
 hybridToggleEl.onclick = ()=>showHybrid(currentStyle==='streets');
 
-// Sync & persist map views
+// Sync view & localStorage
 let syncing=false;
 function syncView(src,tgt){ if(syncing) return; syncing=true; const c=src.getCenter(), z=src.getZoom(); tgt.jumpTo({center:[c.lng,c.lat], zoom:z}); syncing=false; }
 mapStreets.on('move',()=>syncView(mapStreets,mapHybrid));
@@ -281,4 +299,5 @@ document.getElementById('downloadMap').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
