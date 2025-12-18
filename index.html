@@ -7,11 +7,21 @@
 <style>
 html, body { margin:0; height:100%; }
 .map { width:100%; height:100%; position:absolute; top:0; left:0; }
-#controls { position:absolute; top:10px; right:10px; z-index:20; background:white; padding:10px; border:1px solid #ccc; font:14px sans-serif; display:flex; flex-direction:column; gap:5px; }
-#hybridToggle { position:absolute; top:10px; left:10px; z-index:20; background:white; padding:6px 10px; border:1px solid #ccc; cursor:pointer; font:14px sans-serif; }
+#controls {
+  position:absolute; top:10px; right:10px; z-index:20;
+  background:white; padding:10px; border:1px solid #ccc;
+  font:14px sans-serif; display:flex; flex-direction:column; gap:5px;
+}
+#hybridToggle {
+  position:absolute; bottom:10px; right:10px; z-index:20;
+  background:white; padding:6px 10px; border:1px solid #ccc;
+  cursor:pointer; font:14px sans-serif;
+}
 #info { margin-top:5px; }
 button, select { font:14px sans-serif; }
-.maptiler-logo { position:absolute; left:10px; bottom:10px; z-index:20; }
+.maptiler-logo {
+  position:absolute; left:10px; bottom:10px; z-index:20;
+}
 </style>
 </head>
 <body>
@@ -19,27 +29,28 @@ button, select { font:14px sans-serif; }
 <div id="map-streets" class="map"></div>
 <div id="map-hybrid" class="map" style="display:none;"></div>
 
-<div id="hybridToggle">Hybrid</div>
-
 <div id="controls">
   <button id="toggleRoute">Enable Routing</button>
   <select id="mode">
-    <option value="driving">Driving</option>
-    <option value="walking">Walking</option>
-    <option value="cycling">Cycling</option>
+    <option value="car">Car</option>
+    <option value="foot">Walking</option>
+    <option value="bike">Cycling</option>
   </select>
   <button id="resetRoute">Reset Route</button>
   <div id="info"></div>
 </div>
+
+<div id="hybridToggle">Hybrid</div>
 
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
 </a>
 
 <script>
-const KEY = '1xuGVLLA0XJlvXZT2dFB';
-const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${KEY}`;
-const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`;
+const GH_KEY = '0d7495c0-8c43-4cbb-ba2a-889c2c31e825'; // GraphHopper API key
+const MT_KEY = '1xuGVLLA0XJlvXZT2dFB';
+const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
+const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
 const STORAGE_VIEW = 'mapView';
 const STORAGE_STYLE = 'mapStyle';
@@ -56,8 +67,20 @@ let markers = [];
 const info = document.getElementById('info');
 
 // --- Initialize Maps ---
-const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center:savedView?.center||[0,0], zoom:savedView?.zoom??1, attributionControl:false });
-const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center:savedView?.center||[0,0], zoom:savedView?.zoom??1, attributionControl:false });
+const mapStreets = new maplibregl.Map({
+  container:'map-streets',
+  style:STREETS_URL,
+  center:savedView?.center||[0,0],
+  zoom:savedView?.zoom??1,
+  attributionControl:false
+});
+const mapHybrid = new maplibregl.Map({
+  container:'map-hybrid',
+  style:HYBRID_URL,
+  center:savedView?.center||[0,0],
+  zoom:savedView?.zoom??1,
+  attributionControl:false
+});
 
 // --- Controls ---
 [mapStreets, mapHybrid].forEach(map=>{
@@ -71,7 +94,7 @@ function showHybrid(isHybrid){
   if(isHybrid){
     document.getElementById('map-streets').style.display='none';
     document.getElementById('map-hybrid').style.display='block';
-    mapHybrid.resize(); // fix tiny-box rendering
+    mapHybrid.resize(); // avoid tiny box on reload
   } else {
     document.getElementById('map-streets').style.display='block';
     document.getElementById('map-hybrid').style.display='none';
@@ -88,8 +111,7 @@ let syncing=false;
 function syncView(sourceMap,targetMap){
   if(syncing) return;
   syncing=true;
-  const c=sourceMap.getCenter();
-  const z=sourceMap.getZoom();
+  const c=sourceMap.getCenter(), z=sourceMap.getZoom();
   targetMap.jumpTo({center:[c.lng,c.lat], zoom:z});
   syncing=false;
 }
@@ -99,8 +121,7 @@ mapHybrid.on('move',()=>syncView(mapHybrid,mapStreets));
 // --- Persist View ---
 function saveView(){
   const activeMap = currentStyle==='streets'?mapStreets:mapHybrid;
-  const c=activeMap.getCenter();
-  const z=activeMap.getZoom();
+  const c=activeMap.getCenter(), z=activeMap.getZoom();
   localStorage.setItem(STORAGE_VIEW,JSON.stringify({center:[c.lng,c.lat], zoom:z}));
 }
 mapStreets.on('moveend', saveView);
@@ -123,22 +144,25 @@ document.getElementById('mode').onchange = function(){
   if(routePoints.length===2) fetchRoute();
 };
 
-// --- Reset Route ---
+// --- Reset ---
 document.getElementById('resetRoute').onclick = clearRoute;
 
 // --- Routing Functions ---
 function addMarker(map,lngLat,index){
-  const marker = new maplibregl.Marker({draggable:true}).setLngLat(lngLat).addTo(map);
-  marker.on('dragend',()=> {
-    routePoints[index] = [marker.getLngLat().lng, marker.getLngLat().lat];
+  const m = new maplibregl.Marker({draggable:true})
+    .setLngLat(lngLat)
+    .addTo(map);
+
+  m.on('dragend',()=>{
+    routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat];
     if(routePoints.length===2) fetchRoute();
   });
-  markers.push(marker);
+
+  markers.push(m);
 }
 
 function clearRoute(){
-  markers.forEach(m=>m.remove());
-  markers=[];
+  markers.forEach(m=>m.remove()); markers=[];
   info.innerHTML='';
   [mapStreets,mapHybrid].forEach(m=>{
     if(m.getLayer('route')) m.removeLayer('route');
@@ -147,26 +171,40 @@ function clearRoute(){
   routePoints=[];
 }
 
-// --- Fetch Route using OSRM ---
+// --- Fetch Route using GraphHopper ---
 function fetchRoute(){
   if(routePoints.length!==2) return;
-  const coords = `${routePoints[0][0]},${routePoints[0][1]};${routePoints[1][0]},${routePoints[1][1]}`;
-  let profile = routingMode;
-  if(routingMode==='walking') profile='foot';
-  if(routingMode==='cycling') profile='bike';
-  // Using OSRM demo server
-  const osrmProfile = routingMode; // OSRM supports 'driving', 'walking', 'cycling'
-  const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${coords}?overview=full&geometries=geojson`;
-  fetch(url).then(res=>res.json()).then(data=>{
-    if(!data.routes || !data.routes[0]) return;
-    const routeGeoJSON = { type:'Feature', geometry:data.routes[0].geometry };
-    const distanceKm = (data.routes[0].distance/1000).toFixed(2);
-    const durationMin = Math.round(data.routes[0].duration/60);
-    info.innerHTML=`Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
+
+  // call GH Directions API — use POST for robust requests
+  const body = {
+    points: routePoints.map(p=>[p[1],p[0]]), // GraphHopper uses [lat,lon] arrays in POST
+    profile: routingMode,                    // car, foot, bike supported profiles:contentReference[oaicite:2]{index=2}
+    locale: "en",
+    instructions: true
+  };
+
+  fetch(`https://graphhopper.com/api/1/route?key=${GH_KEY}`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    if(!data.paths || !data.paths[0]) return;
+    const path = data.paths[0];
+    const coords = path.points.coordinates.map(pt => [pt[1], pt[0]]);
+    const routeGeoJSON = { type:'Feature', geometry:{ type:'LineString', coordinates: coords }};
+    const distanceKm = (path.distance/1000).toFixed(2);
+    const durationMin = Math.round(path.time/60000);
+
+    info.innerHTML = `Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
+
     [mapStreets,mapHybrid].forEach(m=>{
-      if(m.getSource('route')) { m.removeLayer('route'); m.removeSource('route'); }
-      m.addSource('route',{type:'geojson', data:routeGeoJSON});
-      m.addLayer({id:'route', type:'line', source:'route', layout:{'line-cap':'round','line-join':'round'}, paint:{'line-color':'#0074d9','line-width':5}});
+      if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
+      m.addSource('route',{type:'geojson', data: routeGeoJSON});
+      m.addLayer({id:'route', type:'line', source:'route',
+        layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':'#0074d9','line-width':5}});
     });
   });
 }
@@ -176,15 +214,13 @@ function onMapClick(e){
   if(!routingEnabled) return;
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
   if(routePoints.length===2) clearRoute();
-  const lngLat = [e.lngLat.lng,e.lngLat.lat];
-  const index = routePoints.length;
+  const lngLat=[e.lngLat.lng,e.lngLat.lat];
+  addMarker(map, lngLat, routePoints.length);
   routePoints.push(lngLat);
-  addMarker(map,lngLat,index);
   if(routePoints.length===2) fetchRoute();
 }
 
 [mapStreets,mapHybrid].forEach(m=>m.on('click', onMapClick));
-
 </script>
 </body>
 </html>
