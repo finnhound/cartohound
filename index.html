@@ -4,30 +4,25 @@
 <meta charset="utf-8">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-
 <style>
 html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 .map { width:100%; height:100%; position:absolute; top:0; left:0; }
 
-/* Search box */
-#searchContainer {
-  position:absolute;
-  top:10px;
-  right:10px;
-  z-index:30;
-}
-#searchBox { width:220px; padding:6px; border-radius:8px; border:1px solid #ccc; }
-#searchResults { position:absolute; top:38px; right:0; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; width:220px; z-index:31; border-radius:4px; display:none; }
+/* Top-left container for search + routing */
+#topLeftContainer { position:absolute; top:10px; left:10px; z-index:30; display:flex; flex-direction:column; gap:8px; }
+#searchBox { width:260px; padding:8px; border-radius:8px; border:1px solid #ccc; font-size:14px; }
+#searchResults { position:absolute; top:38px; left:0; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; width:260px; z-index:31; border-radius:4px; display:none; }
 .searchItem { padding:4px 6px; cursor:pointer; }
 .searchItem:hover { background:#eee; }
 
-/* Routing controls */
-#routingPanel { 
-  position:absolute; top:70px; right:10px; z-index:25; background:white; padding:10px; border:1px solid #ccc; display:flex; flex-direction:column; gap:5px; border-radius:6px; width:220px; opacity:0.95;
-}
+/* Routing dropdown */
+#routingDropdown { position:relative; }
+#routingButton { padding:8px 12px; border-radius:6px; border:1px solid #ccc; background:rgba(255,255,255,0.9); cursor:pointer; font-size:14px; }
+#routingPanel { position:absolute; top:40px; left:0; background:rgba(255,255,255,0.9); padding:10px; border:1px solid #ccc; border-radius:6px; display:none; flex-direction:column; gap:5px; width:220px; z-index:32; }
+#routingPanel select, #routingPanel button { font-size:14px; }
 
 /* Buttons */
-#hybridToggle, #downloadMap {
+#downloadMap, #hybridToggle {
   position:absolute; right:10px; z-index:20; width:40px; height:40px; border-radius:6px; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; cursor:pointer; background:white;
 }
 #downloadMap { top:130px; }
@@ -35,13 +30,13 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 #hybridToggle.active { background:#ddd; }
 #hybridToggle img, #downloadMap svg { width:24px; height:24px; }
 
+/* Map info */
 .route-info { position:absolute; top:50px; left:50%; transform:translateX(-50%); background:white; padding:8px 14px; border:1px solid #333; font:14px 'Inter', sans-serif; z-index:25; border-radius:6px; opacity:0.9; pointer-events:none; }
 .loading { position:absolute; top:20px; left:50%; transform:translateX(-50%); background:yellow; padding:6px 12px; border-radius:4px; z-index:40; font-weight:bold; display:none; }
 
+/* Attribution */
 .attribution-text { position:absolute; bottom:10px; right:10px; z-index:25; background:rgba(255,255,255,0.85); padding:6px 10px; font:12px 'Inter', sans-serif; border-radius:6px; }
 .maptiler-logo { position:absolute; left:10px; bottom:10px; z-index:25; }
-
-button, select { font:14px 'Inter', sans-serif; }
 </style>
 </head>
 <body>
@@ -49,24 +44,28 @@ button, select { font:14px 'Inter', sans-serif; }
 <div id="map-streets" class="map"></div>
 <div id="map-hybrid" class="map" style="display:none;"></div>
 
-<!-- Separated search -->
-<div id="searchContainer">
-  <input id="searchBox" type="text" placeholder="Search"/>
-  <div id="searchResults"></div>
+<!-- Top-left container -->
+<div id="topLeftContainer">
+  <div id="searchContainer">
+    <input id="searchBox" type="text" placeholder="Search"/>
+    <div id="searchResults"></div>
+  </div>
+
+  <div id="routingDropdown">
+    <div id="routingButton">Routing</div>
+    <div id="routingPanel">
+      <button id="toggleRoute">Enable Routing</button>
+      <select id="mode">
+        <option value="driving-car">Car</option>
+        <option value="foot-walking">Walking</option>
+        <option value="cycling-regular">Cycling</option>
+      </select>
+      <button id="resetRoute">Reset Route</button>
+    </div>
+  </div>
 </div>
 
-<!-- Routing panel -->
-<div id="routingPanel">
-  <button id="toggleRoute">Enable Routing</button>
-  <select id="mode">
-    <option value="driving-car">Car</option>
-    <option value="foot-walking">Walking</option>
-    <option value="cycling-regular">Cycling</option>
-  </select>
-  <button id="resetRoute">Reset Route</button>
-</div>
-
-<!-- Buttons -->
+<!-- Buttons on right -->
 <div id="downloadMap" title="Download Map">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
     <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
@@ -89,11 +88,13 @@ button, select { font:14px 'Inter', sans-serif; }
 </a>
 
 <script>
-const ORS_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjMzkyNDVlOGIyNjQxYjVhMDRhNWEwNjdlMTM4MDc0IiwiaCI6Im11cm11cjY0In0=";
+// === Map keys ===
+const ORS_KEY = "..."; // Replace with your ORS key
 const MT_KEY = 'kUOJqqeRX1BMaXctsgK5';
 const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
 const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
+// === State ===
 const savedView = JSON.parse(localStorage.getItem('mapView') || 'null');
 let currentStyle = localStorage.getItem('mapStyle') || 'streets';
 let routingEnabled = JSON.parse(localStorage.getItem('mapRouteEnabled') || 'false');
@@ -103,6 +104,7 @@ let routePoints = [];
 let markers = [];
 let startMarker = null;
 let endMarker = null;
+
 const routeInfo = document.getElementById('route-info');
 const loadingEl = document.getElementById('loading');
 const searchBox = document.getElementById('searchBox');
@@ -113,30 +115,39 @@ const defaultPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height
 const startPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00c7be" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 const endPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 
-// Initialize maps
-const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
-const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
-[mapStreets,mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
+// === Initialize Maps ===
+const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:true, preserveDrawingBuffer:true });
+const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:true, preserveDrawingBuffer:true });
+
+// Compass/zoom top-right
+[mapStreets,mapHybrid].forEach(m=>{
+  m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-right');
+});
 
 // Hybrid toggle
 const hybridToggleEl = document.getElementById('hybridToggle');
-function showHybrid(isHybrid) {
+function showHybrid(isHybrid){
   hybridToggleEl.classList.toggle('active', isHybrid);
-  if(isHybrid){ document.getElementById('map-streets').style.display='none'; document.getElementById('map-hybrid').style.display='block'; mapHybrid.resize(); }
-  else { document.getElementById('map-streets').style.display='block'; document.getElementById('map-hybrid').style.display='none'; mapStreets.resize(); }
+  if(isHybrid){ mapStreets.getContainer().style.display='none'; mapHybrid.getContainer().style.display='block'; mapHybrid.resize(); }
+  else { mapHybrid.getContainer().style.display='none'; mapStreets.getContainer().style.display='block'; mapStreets.resize(); }
   currentStyle = isHybrid?'hybrid':'streets';
-  localStorage.setItem('mapStyle',currentStyle);
+  localStorage.setItem('mapStyle', currentStyle);
 }
 showHybrid(currentStyle==='hybrid');
 hybridToggleEl.onclick = ()=>showHybrid(currentStyle==='streets');
 
-// Sync view & localStorage
+// Sync view
 let syncing=false;
 function syncView(src,tgt){ if(syncing) return; syncing=true; const c=src.getCenter(), z=src.getZoom(); tgt.jumpTo({center:[c.lng,c.lat], zoom:z}); syncing=false; }
 mapStreets.on('move',()=>syncView(mapStreets,mapHybrid));
 mapHybrid.on('move',()=>syncView(mapHybrid,mapStreets));
 function saveView(){ const activeMap = currentStyle==='streets'?mapStreets:mapHybrid; const c=activeMap.getCenter(), z=activeMap.getZoom(); localStorage.setItem('mapView',JSON.stringify({center:[c.lng,c.lat], zoom:z})); }
 mapStreets.on('moveend', saveView); mapHybrid.on('moveend', saveView);
+
+// === Routing dropdown toggle ===
+const routingButton = document.getElementById('routingButton');
+const routingPanel = document.getElementById('routingPanel');
+routingButton.onclick = ()=> routingPanel.style.display = routingPanel.style.display==='flex'?'none':'flex';
 
 // Routing UI
 const toggleRouteBtn = document.getElementById('toggleRoute');
@@ -299,5 +310,6 @@ document.getElementById('downloadMap').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
 
