@@ -32,7 +32,7 @@ button, select { font:14px sans-serif; }
 <div id="controls">
   <button id="toggleRoute">Enable Routing</button>
   <select id="mode">
-    <option value="car">Car</option>
+    <option value="driving">Car</option>
     <option value="foot">Walking</option>
     <option value="bike">Cycling</option>
   </select>
@@ -47,10 +47,9 @@ button, select { font:14px sans-serif; }
 </a>
 
 <script>
-const GH_KEY = '0d7495c0-8c43-4cbb-ba2a-889c2c31e825'; // GraphHopper API key
-const MT_KEY = '1xuGVLLA0XJlvXZT2dFB';
-const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
-const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
+const KEY = '1xuGVLLA0XJlvXZT2dFB';
+const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${KEY}`;
+const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`;
 
 const STORAGE_VIEW = 'mapView';
 const STORAGE_STYLE = 'mapStyle';
@@ -94,7 +93,7 @@ function showHybrid(isHybrid){
   if(isHybrid){
     document.getElementById('map-streets').style.display='none';
     document.getElementById('map-hybrid').style.display='block';
-    mapHybrid.resize(); // avoid tiny box on reload
+    mapHybrid.resize();
   } else {
     document.getElementById('map-streets').style.display='block';
     document.getElementById('map-hybrid').style.display='none';
@@ -140,7 +139,7 @@ toggleRouteBtn.onclick = ()=>{
 
 // --- Mode Selector ---
 document.getElementById('mode').onchange = function(){
-  routingMode = this.value;
+  routingMode = this.value; // driving, foot, bike
   if(routePoints.length===2) fetchRoute();
 };
 
@@ -152,12 +151,10 @@ function addMarker(map,lngLat,index){
   const m = new maplibregl.Marker({draggable:true})
     .setLngLat(lngLat)
     .addTo(map);
-
   m.on('dragend',()=>{
     routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat];
     if(routePoints.length===2) fetchRoute();
   });
-
   markers.push(m);
 }
 
@@ -171,37 +168,20 @@ function clearRoute(){
   routePoints=[];
 }
 
-// --- Fetch Route using GraphHopper ---
+// --- Fetch Route using OSRM ---
 function fetchRoute(){
   if(routePoints.length!==2) return;
-
-  // call GH Directions API — use POST for robust requests
-  const body = {
-    points: routePoints.map(p=>[p[1],p[0]]), // GraphHopper uses [lat,lon] arrays in POST
-    profile: routingMode,                    // car, foot, bike supported profiles:contentReference[oaicite:2]{index=2}
-    locale: "en",
-    instructions: true
-  };
-
-  fetch(`https://graphhopper.com/api/1/route?key=${GH_KEY}`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  })
-  .then(res=>res.json())
-  .then(data=>{
-    if(!data.paths || !data.paths[0]) return;
-    const path = data.paths[0];
-    const coords = path.points.coordinates.map(pt => [pt[1], pt[0]]);
-    const routeGeoJSON = { type:'Feature', geometry:{ type:'LineString', coordinates: coords }};
-    const distanceKm = (path.distance/1000).toFixed(2);
-    const durationMin = Math.round(path.time/60000);
-
-    info.innerHTML = `Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
-
+  const coords = `${routePoints[0][0]},${routePoints[0][1]};${routePoints[1][0]},${routePoints[1][1]}`;
+  const url = `https://router.project-osrm.org/route/v1/${routingMode}/${coords}?overview=full&geometries=geojson`;
+  fetch(url).then(res=>res.json()).then(data=>{
+    if(!data.routes || !data.routes[0]) return;
+    const routeGeoJSON = { type:'Feature', geometry:data.routes[0].geometry };
+    const distanceKm = (data.routes[0].distance/1000).toFixed(2);
+    const durationMin = Math.round(data.routes[0].duration/60);
+    info.innerHTML=`Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
     [mapStreets,mapHybrid].forEach(m=>{
-      if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
-      m.addSource('route',{type:'geojson', data: routeGeoJSON});
+      if(m.getSource('route')) { m.removeLayer('route'); m.removeSource('route'); }
+      m.addSource('route',{type:'geojson', data:routeGeoJSON});
       m.addLayer({id:'route', type:'line', source:'route',
         layout:{'line-cap':'round','line-join':'round'},
         paint:{'line-color':'#0074d9','line-width':5}});
@@ -209,7 +189,7 @@ function fetchRoute(){
   });
 }
 
-// --- Map Click Handler ---
+// --- Map Click ---
 function onMapClick(e){
   if(!routingEnabled) return;
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
