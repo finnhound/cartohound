@@ -6,31 +6,33 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
 <style>
-html, body { margin:0; height:100%; }
+html, body { margin:0; height:100%; font-family:'Inter', system-ui, sans-serif; }
 .map { width:100%; height:100%; position:absolute; top:0; left:0; }
 #controls {
   position:absolute; top:10px; right:10px; z-index:20;
   background:white; padding:10px; border:1px solid #ccc;
-  font:14px sans-serif; display:flex; flex-direction:column; gap:5px;
+  display:flex; flex-direction:column; gap:5px;
 }
 #hybridToggle {
-  position:absolute; bottom:10px; right:10px; z-index:20;
+  position:absolute; top:130px; right:10px; z-index:20;
   background:white; padding:6px 10px; border:1px solid #ccc;
-  cursor:pointer; font:14px sans-serif;
+  cursor:pointer;
+  border-radius:4px;
+}
+button, select { font:14px 'Inter', system-ui, sans-serif; }
+.route-info {
+  position:absolute; top:50px; left:50%; transform:translateX(-50%);
+  background:white; padding:6px 12px; border:1px solid #333;
+  font:14px 'Inter', system-ui, sans-serif; z-index:20; border-radius:4px;
+  opacity:0.9;
 }
 .attribution-text {
-  position:absolute; bottom:10px; left:50px; z-index:20; 
-  background:rgba(255,255,255,0.8); padding:4px 8px; font:12px sans-serif;
+  position:absolute; bottom:10px; left:10px; z-index:20; 
+  background:rgba(255,255,255,0.85); padding:4px 8px; font:12px 'Inter', system-ui, sans-serif;
+  border-radius:4px;
 }
 .maptiler-logo {
-  position:absolute; left:10px; bottom:10px; z-index:20;
-}
-.route-info {
-  position:absolute;
-  top:50px; left:50%; transform:translateX(-50%);
-  background:white; padding:6px 12px; border:1px solid #333;
-  font:14px sans-serif; z-index:20; border-radius:4px;
-  opacity:0.9;
+  position:absolute; left:10px; bottom:10px; z-index:25;
 }
 </style>
 </head>
@@ -51,18 +53,16 @@ html, body { margin:0; height:100%; }
 
 <div id="hybridToggle">Hybrid</div>
 
-<!-- MapTiler logo required -->
+<!-- Floating route info -->
+<div id="route-info" class="route-info" style="display:none;"></div>
+
+<!-- Attribution and MapTiler logo -->
+<div class="attribution-text">
+  © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors | Tiles © MapTiler
+</div>
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
 </a>
-
-<!-- ORS attribution required -->
-<div class="attribution-text">
-  © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors
-</div>
-
-<!-- Floating route info -->
-<div id="route-info" class="route-info" style="display:none;"></div>
 
 <script>
 const ORS_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjMzkyNDVlOGIyNjQxYjVhMDRhNWEwNjdlMTM4MDc0IiwiaCI6Im11cm11cjY0In0=";
@@ -99,10 +99,9 @@ const mapHybrid = new maplibregl.Map({
   attributionControl:false
 });
 
-// Add navigation & attribution
+// Add navigation controls
 [mapStreets, mapHybrid].forEach(m=>{
   m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left');
-  m.addControl(new maplibregl.AttributionControl({compact:false}),'bottom-right');
 });
 
 // Hybrid toggle
@@ -239,4 +238,3 @@ function onMapClick(e){
 
 </body>
 </html>
-
