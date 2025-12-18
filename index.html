@@ -182,27 +182,45 @@ updateSearchPlaceholder();
 
 // Add pin logic
 function addPin(map,lngLat,isSearch=false){
-  const m = new maplibregl.Marker({draggable:!routingEnabled}).setLngLat(lngLat).addTo(map);
+  const m = new maplibregl.Marker({draggable: routingEnabled}).setLngLat(lngLat).addTo(map);
   m.getElement().style.cursor = 'pointer';
+
+  function removePin() {
+    m.remove();
+    markers = markers.filter(x=>x!==m);
+    if(startMarker===m) { startMarker=null; routePoints.shift(); }
+    if(endMarker===m) { endMarker=null; routePoints.pop(); }
+    routeInfo.style.display='none';
+    [mapStreets,mapHybrid].forEach(mp=>{
+      if(mp.getLayer('route')) mp.removeLayer('route');
+      if(mp.getSource('route')) mp.removeSource('route');
+    });
+  }
+
+  m.getElement().addEventListener('click', ()=>{ removePin(); });
+
   if(isSearch){
-    if(!routingEnabled && searchBox.value!==''){
+    if(!routingEnabled){
       markers.forEach(mark=>mark.remove());
       markers=[];
     }
+
     if(routingEnabled){
       if(!startMarker){ 
         if(startMarker) startMarker.remove(); 
         startMarker=m; routePoints[0]=lngLat;
+        m.getElement().style.backgroundColor='green';
       } else { 
         if(endMarker) endMarker.remove(); 
         endMarker=m; routePoints[1]=lngLat; 
+        m.getElement().style.backgroundColor='orange';
         fetchRoute(); 
       }
-    } else { markers.push(m); }
-    m.getElement().addEventListener('click', ()=>{ if(!routingEnabled) { m.remove(); markers=markers.filter(x=>x!==m); } });
+    } else {
+      markers.push(m);
+    }
   } else {
     markers.push(m);
-    m.on('dragend',()=>{ routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat]; if(routePoints.length===2) fetchRoute(); });
   }
 }
 
@@ -248,6 +266,7 @@ function fetchRoute(){
 
 // Map clicks for routing
 function onMapClick(e){
+  if(!routingEnabled) return;
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
   addPin(map,[e.lngLat.lng,e.lngLat.lat], true);
 }
@@ -269,7 +288,7 @@ searchBox.addEventListener('input', ()=>{
         results.slice(0,5).forEach(r=>{
           const div = document.createElement('div');
           div.className='searchItem';
-          div.textContent=r.display_name;
+          div.textContent = r.display_name;
           div.onclick=()=> {
             searchResults.style.display='none';
             const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
