@@ -14,6 +14,8 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 #hybridToggle.active { background:#ddd; }
 #hybridToggle img { width:24px; height:24px; }
 
+#downloadMap { position:absolute; top:230px; right:10px; z-index:20; padding:8px; border-radius:6px; background:white; border:1px solid #ccc; cursor:pointer; font:14px 'Inter', sans-serif; }
+
 button, select, input { font:14px 'Inter', sans-serif; }
 
 #searchBox { width:200px; padding:4px; border-radius:4px; border:1px solid #ccc; z-index:26; position:relative; }
@@ -49,6 +51,8 @@ button, select, input { font:14px 'Inter', sans-serif; }
 <div id="hybridToggle">
   <img src="https://raw.githubusercontent.com/finnhound/cartohound/7b3c8e14c393450a26d9d562c99016afad43d83a/stack%20(1).svg" alt="Hybrid Map Icon">
 </div>
+
+<button id="downloadMap">Download Map</button>
 
 <div id="route-info" class="route-info" style="display:none;"></div>
 <div id="loading" class="loading">Loading...</div>
@@ -262,6 +266,23 @@ searchBox.addEventListener('input', ()=>{
 });
 document.addEventListener('click', e=> { if(!searchResults.contains(e.target) && e.target!==searchBox) searchResults.style.display='none'; });
 
+// Download map
+const downloadBtn = document.getElementById('downloadMap');
+downloadBtn.onclick = async () => {
+  const activeMap = currentStyle==='streets'?mapStreets:mapHybrid;
+  const controls = document.getElementById('controls');
+  controls.style.display='none';
+  hybridToggleEl.style.display='none';
+  searchResults.style.display='none';
+  await new Promise(r=>setTimeout(r,50));
+  const dataURL = activeMap.getCanvas().toDataURL('image/png');
+  controls.style.display='flex';
+  hybridToggleEl.style.display='flex';
+  const link = document.createElement('a');
+  link.href = dataURL;
+  link.download = routingEnabled?'map_with_route.png':'map.png';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+};
 </script>
 </body>
 </html>
