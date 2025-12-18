@@ -2,93 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Cartohound – Stable Build</title>
+<title>Cartohound Map – Full Features</title>
 
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
 <style>
-html, body {
-  margin: 0;
-  height: 100%;
-  font-family: Inter, system-ui, sans-serif;
-}
+html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
+#map-streets,#map-hybrid { position:absolute; inset:0; }
+#map-hybrid { display:none; }
 
-#map-streets, #map-hybrid {
-  position: absolute;
-  inset: 0;
-}
+#searchWrap { position:absolute; top:10px; left:10px; width:280px; z-index:20; }
+#search { width:100%; padding:10px 14px; border-radius:999px; border:1px solid #bbb; font-size:15px; }
+#results { display:none; margin-top:6px; border-radius:12px; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; }
+.result { padding:8px 12px; cursor:pointer; }
+.result:hover { background:#eee; }
 
-#map-hybrid { display: none; }
+#buttons { position:absolute; bottom:20px; left:10px; z-index:20; display:flex; gap:10px; }
+.btn { width:44px; height:44px; border-radius:10px; border:1px solid #ccc; background:white; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.btn img, .btn svg { width:22px; height:22px; }
 
-/* Search */
-#searchWrap {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  z-index: 10;
-  width: 280px;
-}
+#routeInfo { position:absolute; top:60px; left:50%; transform:translateX(-50%); background:white; padding:8px 14px; border-radius:6px; font-size:14px; opacity:0.9; z-index:25; display:none; pointer-events:none; }
+.loading { position:absolute; top:50px; left:50%; transform:translateX(-50%); background:yellow; padding:6px 12px; border-radius:4px; font-weight:bold; display:none; z-index:30; }
 
-#search {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 15px;
-  border-radius: 999px;
-  border: 1px solid #bbb;
-}
-
-#results {
-  margin-top: 6px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #ccc;
-  overflow: hidden;
-  display: none;
-}
-
-.result {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-.result:hover { background: #eee; }
-
-/* Buttons */
-#buttons {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  z-index: 10;
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.btn img, .btn svg {
-  width: 22px;
-  height: 22px;
-}
+.attribution-text { position:absolute; bottom:10px; right:10px; z-index:25; background:rgba(255,255,255,0.85); padding:6px 10px; font:12px 'Inter', sans-serif; border-radius:6px; }
+.maptiler-logo { position:absolute; left:10px; bottom:10px; z-index:25; }
 </style>
 </head>
-
 <body>
 
 <div id="map-streets"></div>
 <div id="map-hybrid"></div>
 
 <div id="searchWrap">
-  <input id="search" placeholder="Search location">
+  <input id="search" placeholder="Search"/>
   <div id="results"></div>
 </div>
 
@@ -96,110 +43,203 @@ html, body {
   <div id="toggleLayer" class="btn">
     <img src="https://raw.githubusercontent.com/finnhound/cartohound/7b3c8e14c393450a26d9d562c99016afad43d83a/stack%20(1).svg">
   </div>
+  <div id="downloadMap" class="btn">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+      <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
+    </svg>
+  </div>
 </div>
 
+<div id="routeInfo"></div>
+<div id="loading">Loading...</div>
+
+<div class="attribution-text">
+  © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors | Tiles © MapTiler
+</div>
+<a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
+  <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
+</a>
+
 <script>
-/* ================== CONFIG ================== */
-const MT_KEY = "kUOJqqeRX1BMaXctsgK5";
+/* ======= CONFIG ======= */
 const ORS_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjMzkyNDVlOGIyNjQxYjVhMDRhNWEwNjdlMTM4MDc0IiwiaCI6Im11cm11cjY0In0=";
+const MT_KEY = 'kUOJqqeRX1BMaXctsgK5';
+const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
+const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
-const STREETS = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
-const HYBRID  = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
-
-/* ================== MAPS ================== */
-const mapStreets = new maplibregl.Map({
-  container: "map-streets",
-  style: STREETS,
-  center: [0, 0],
-  zoom: 2,
-  attributionControl: true,
-  preserveDrawingBuffer: true
-});
-
-const mapHybrid = new maplibregl.Map({
-  container: "map-hybrid",
-  style: HYBRID,
-  center: [0, 0],
-  zoom: 2,
-  attributionControl: true,
-  preserveDrawingBuffer: true
-});
-
-/* Proper attribution */
-[mapStreets, mapHybrid].forEach(m => {
-  m.addControl(new maplibregl.AttributionControl({
-    compact: true,
-    customAttribution: [
-      "© OpenStreetMap contributors",
-      "© MapTiler",
-      "© openrouteservice.org by HeiGIT"
-    ]
-  }));
-  m.addControl(new maplibregl.NavigationControl(), "bottom-right");
-});
-
-/* ================== SYNC ================== */
-let syncing = false;
-function sync(a, b) {
-  if (syncing) return;
-  syncing = true;
-  b.jumpTo({ center: a.getCenter(), zoom: a.getZoom() });
-  syncing = false;
-}
-mapStreets.on("move", () => sync(mapStreets, mapHybrid));
-mapHybrid.on("move", () => sync(mapHybrid, mapStreets));
-
-/* ================== TOGGLE ================== */
+let currentStyle = 'streets';
 let hybrid = false;
+let routingEnabled = false;
+let routingMode = 'driving-car';
+let routePoints = [];
+let markers = [];
+let startMarker=null, endMarker=null;
+
+/* SVG pins */
+const defaultPinSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
+const startPinSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00c7be" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
+const endPinSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
+
+/* ======= MAP INIT ======= */
+const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center:[0,0], zoom:2, attributionControl:true, preserveDrawingBuffer:true });
+const mapHybrid  = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center:[0,0], zoom:2, attributionControl:true, preserveDrawingBuffer:true });
+
+[mapStreets,mapHybrid].forEach(m=>{
+  m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'bottom-right');
+});
+
+/* ======= SYNC MAPS ======= */
+let syncing=false;
+function sync(a,b){ if(syncing) return; syncing=true; b.jumpTo({center:a.getCenter(), zoom:a.getZoom()}); syncing=false; }
+mapStreets.on('move', ()=>sync(mapStreets,mapHybrid));
+mapHybrid.on('move', ()=>sync(mapHybrid,mapStreets));
+
+/* ======= HYBRID TOGGLE ======= */
+const toggleLayer = document.getElementById('toggleLayer');
 toggleLayer.onclick = () => {
   hybrid = !hybrid;
-  document.getElementById("map-streets").style.display = hybrid ? "none" : "block";
-  document.getElementById("map-hybrid").style.display  = hybrid ? "block" : "none";
-  (hybrid ? mapHybrid : mapStreets).resize();
+  document.getElementById('map-streets').style.display = hybrid?'none':'block';
+  document.getElementById('map-hybrid').style.display = hybrid?'block':'none';
+  (hybrid?mapHybrid:mapStreets).resize();
 };
 
-/* ================== SEARCH ================== */
-const search = document.getElementById("search");
-const results = document.getElementById("results");
-let pin = null;
+/* ======= SEARCH ======= */
+const searchBox=document.getElementById('search');
+const searchResults=document.getElementById('results');
+let debounce;
 
-search.addEventListener("input", () => {
-  const q = search.value.trim();
-  if (!q) { results.style.display = "none"; return; }
-
-  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
-    .then(r => r.json())
-    .then(list => {
-      results.innerHTML = "";
-      if (!list.length) return;
-      list.slice(0, 5).forEach(p => {
-        const d = document.createElement("div");
-        d.className = "result";
-        d.textContent = p.display_name;
-        d.onclick = () => {
-          results.style.display = "none";
-          search.value = "";
-
-          if (pin) pin.remove();
-          const m = hybrid ? mapHybrid : mapStreets;
-
-          pin = new maplibregl.Marker()
-            .setLngLat([+p.lon, +p.lat])
-            .addTo(m);
-
-          m.flyTo({ center: [+p.lon, +p.lat], zoom: 14 });
-        };
-        results.appendChild(d);
+searchBox.addEventListener('input', ()=>{
+  clearTimeout(debounce);
+  debounce=setTimeout(()=>{
+    const q=searchBox.value.trim();
+    if(!q){ searchResults.style.display='none'; return; }
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
+      .then(r=>r.json())
+      .then(list=>{
+        searchResults.innerHTML='';
+        list.slice(0,5).forEach(p=>{
+          const d=document.createElement('div');
+          d.className='result';
+          d.textContent=p.display_name;
+          d.onclick=()=>{
+            searchResults.style.display='none';
+            searchBox.value='';
+            const lngLat=[+p.lon,+p.lat];
+            const m = hybrid?mapHybrid:mapStreets;
+            m.flyTo({center:lngLat, zoom:14});
+            addPin(lngLat,true);
+          };
+          searchResults.appendChild(d);
+        });
+        searchResults.style.display='block';
       });
-      results.style.display = "block";
+  },300);
+});
+
+document.addEventListener('click', e=>{
+  if(!searchResults.contains(e.target) && e.target!==searchBox) searchResults.style.display='none';
+});
+
+/* ======= PIN MANAGEMENT ======= */
+function addPin(lngLat,isSearch=false){
+  const m = hybrid?mapHybrid:mapStreets;
+  let svg = defaultPinSVG;
+  let draggable=false;
+
+  if(routingEnabled && !startMarker){ svg=startPinSVG; draggable=true; }
+  else if(routingEnabled && startMarker && !endMarker){ svg=endPinSVG; draggable=true; }
+
+  const el=document.createElement('div');
+  el.style.width='40px'; el.style.height='40px'; el.style.cursor='pointer';
+  el.innerHTML=svg;
+
+  const marker = new maplibregl.Marker({element:el,draggable:draggable}).setLngLat(lngLat).addTo(m);
+
+  if(draggable){
+    marker.on('dragend', ()=>{
+      const pos=[marker.getLngLat().lng,marker.getLngLat().lat];
+      if(marker===startMarker) routePoints[0]=pos;
+      if(marker===endMarker) routePoints[1]=pos;
+      if(routePoints.length===2) fetchRoute();
     });
-});
+  }
 
-document.addEventListener("click", e => {
-  if (!results.contains(e.target) && e.target !== search)
-    results.style.display = "none";
-});
+  marker.getElement().addEventListener('click', ()=>{
+    if(!routingEnabled){ marker.remove(); markers=markers.filter(x=>x!==marker); }
+    else if(marker===startMarker){ startMarker.remove(); startMarker=null; routePoints.shift(); clearRouteLayers(); }
+    else if(marker===endMarker){ endMarker.remove(); endMarker=null; routePoints.pop(); clearRouteLayers(); }
+  });
+
+  if(isSearch){
+    if(!routingEnabled){
+      markers.forEach(mk=>mk.remove());
+      markers=[];
+    }
+    if(routingEnabled){
+      if(!startMarker){ startMarker=marker; routePoints[0]=lngLat; }
+      else if(!endMarker){ endMarker=marker; routePoints[1]=lngLat; fetchRoute(); endMarker=marker; }
+    } else markers.push(marker);
+  } else markers.push(marker);
+}
+
+/* ======= ROUTING ======= */
+const routeInfo = document.getElementById('routeInfo');
+const loadingEl = document.getElementById('loading');
+let loadingTimer=null;
+
+function fetchRoute(){
+  if(routePoints.length!==2) return;
+  loadingTimer=setTimeout(()=>{ loadingEl.style.display='block'; },700);
+  fetch(`https://api.openrouteservice.org/v2/directions/${routingMode}/geojson`,{
+    method:'POST',
+    headers:{'Authorization':ORS_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({coordinates: [routePoints[0],routePoints[1]]})
+  }).then(r=>r.json()).then(data=>{
+    clearTimeout(loadingTimer);
+    loadingEl.style.display='none';
+    if(!data.features||!data.features[0]) return;
+    const feature=data.features[0];
+    const routeGeoJSON=feature.geometry;
+    const distKm=(feature.properties.summary.distance/1000).toFixed(2);
+    const durMin=Math.round(feature.properties.summary.duration/60);
+    routeInfo.innerHTML=`Distance: ${distKm} km | Duration: ${durMin} min`;
+    routeInfo.style.display='block';
+
+    [mapStreets,mapHybrid].forEach(m=>{
+      if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
+      m.addSource('route',{type:'geojson',data:{type:'Feature',geometry:routeGeoJSON}});
+      m.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#0074d9','line-width':5}});
+    });
+
+    const bounds=routeGeoJSON.coordinates.reduce((b,c)=>b.extend(c), new maplibregl.LngLatBounds(routeGeoJSON.coordinates[0], routeGeoJSON.coordinates[0]));
+    const activeMap = hybrid?mapHybrid:mapStreets;
+    activeMap.fitBounds(bounds,{padding:60});
+  });
+}
+
+function clearRouteLayers(){
+  [mapStreets,mapHybrid].forEach(m=>{
+    if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
+  });
+}
+
+/* ======= DOWNLOAD ======= */
+const downloadBtn = document.getElementById('downloadMap');
+downloadBtn.onclick = ()=>{
+  const m = hybrid?mapHybrid:mapStreets;
+  document.getElementById('buttons').style.display='none';
+  document.getElementById('searchWrap').style.display='none';
+  setTimeout(()=>{
+    const dataURL=m.getCanvas().toDataURL('image/png');
+    document.getElementById('buttons').style.display='flex';
+    document.getElementById('searchWrap').style.display='block';
+    const link=document.createElement('a');
+    link.href=dataURL;
+    link.download='map_export.png';
+    link.click();
+  },50);
+};
 </script>
-
 </body>
 </html>
