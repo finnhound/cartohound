@@ -47,6 +47,20 @@ button, select, input { font:14px 'Inter', sans-serif; }
 </div>
 
 <button id="downloadMap"></button>
+<script>
+const downloadIconSVG =
+`<svg xmlns="http://www.w3.org/2000/svg"
+  width="22" height="22" viewBox="0 0 24 24"
+  fill="none" stroke="#5856d6" stroke-width="3"
+  stroke-linecap="round" stroke-linejoin="round">
+  <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+  <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
+</svg>`;
+
+const downloadBtn = document.getElementById('downloadMap');
+downloadBtn.innerHTML = downloadIconSVG;
+</script>
+
 
 <div id="route-info" class="route-info" style="display:none;"></div>
 <div id="loading" class="loading">Loading...</div>
@@ -82,12 +96,6 @@ const searchResults = document.getElementById('searchResults');
 const defaultPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 const startPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00c7be" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 const endPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
-const defaultPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
-    <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
-  </svg>`;
-
-  document.getElementById('downloadMap').innerHTML = defaultPinSVG;
 
 // Initialize maps
 const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, preserveDrawingBuffer: true, attributionControl:false });
