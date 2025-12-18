@@ -35,6 +35,7 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
   border-radius: 4px;
   border: 1px solid #ccc;
 }
+
 #searchResults {
   position: absolute;
   top: 38px;
@@ -53,9 +54,7 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
   padding: 4px 6px;
   cursor: pointer;
 }
-.searchItem:hover {
-  background: #eee;
-}
+.searchItem:hover { background: #eee; }
 
 .route-info {
   position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
@@ -90,7 +89,7 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
 <div id="map-hybrid" class="map" style="display:none;"></div>
 
 <div id="controls">
-  <input id="searchBox" type="text" placeholder="Search location..."/>
+  <input id="searchBox" type="text" placeholder="Search"/>
   <div id="searchResults"></div>
   <button id="toggleRoute">Enable Routing</button>
   <select id="mode">
@@ -129,41 +128,23 @@ let routingMode = document.getElementById('mode').value;
 let routePoints = [];
 let markers = [];
 let searchMarker = null;
+let searchMarkerName = '';
 const routeInfo = document.getElementById('route-info');
 const loadingEl = document.getElementById('loading');
+const searchBox = document.getElementById('searchBox');
+const searchResults = document.getElementById('searchResults');
 
 // Initialize maps
-const mapStreets = new maplibregl.Map({
-  container:'map-streets',
-  style:STREETS_URL,
-  center: savedView?.center || [0,0],
-  zoom: savedView?.zoom ?? 1,
-  attributionControl:false
-});
-const mapHybrid = new maplibregl.Map({
-  container:'map-hybrid',
-  style:HYBRID_URL,
-  center: savedView?.center || [0,0],
-  zoom: savedView?.zoom ?? 1,
-  attributionControl:false
-});
-[mapStreets, mapHybrid].forEach(m=>{
-  m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left');
-});
+const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false });
+const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false });
+[mapStreets, mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
 
 // Hybrid toggle
 const hybridToggleEl = document.getElementById('hybridToggle');
 function showHybrid(isHybrid) {
   hybridToggleEl.classList.toggle('active', isHybrid);
-  if(isHybrid){
-    document.getElementById('map-streets').style.display='none';
-    document.getElementById('map-hybrid').style.display='block';
-    mapHybrid.resize();
-  } else {
-    document.getElementById('map-streets').style.display='block';
-    document.getElementById('map-hybrid').style.display='none';
-    mapStreets.resize();
-  }
+  if(isHybrid){ document.getElementById('map-streets').style.display='none'; document.getElementById('map-hybrid').style.display='block'; mapHybrid.resize(); }
+  else { document.getElementById('map-streets').style.display='block'; document.getElementById('map-hybrid').style.display='none'; mapStreets.resize(); }
   currentStyle = isHybrid?'hybrid':'streets';
   localStorage.setItem('mapStyle',currentStyle);
 }
@@ -176,35 +157,43 @@ function syncView(src,tgt){ if(syncing) return; syncing=true; const c=src.getCen
 mapStreets.on('move',()=>syncView(mapStreets,mapHybrid));
 mapHybrid.on('move',()=>syncView(mapHybrid,mapStreets));
 function saveView(){ const activeMap = currentStyle==='streets'?mapStreets:mapHybrid; const c=activeMap.getCenter(), z=activeMap.getZoom(); localStorage.setItem('mapView',JSON.stringify({center:[c.lng,c.lat], zoom:z})); }
-mapStreets.on('moveend', saveView);
-mapHybrid.on('moveend', saveView);
+mapStreets.on('moveend', saveView); mapHybrid.on('moveend', saveView);
 
 // Routing UI
 const toggleRouteBtn = document.getElementById('toggleRoute');
-function updateRouteButton(){ toggleRouteBtn.textContent = routingEnabled?'Disable Routing':'Enable Routing'; }
+function updateRouteButton(){ toggleRouteBtn.textContent = routingEnabled?'Disable Routing':'Enable Routing'; updateSearchPlaceholder(); }
 updateRouteButton();
-toggleRouteBtn.onclick = ()=>{
-  routingEnabled = !routingEnabled;
-  localStorage.setItem('mapRouteEnabled',routingEnabled);
-  updateRouteButton();
-  if(!routingEnabled) clearRoute();
-};
+toggleRouteBtn.onclick = ()=>{ routingEnabled = !routingEnabled; localStorage.setItem('mapRouteEnabled',routingEnabled); updateRouteButton(); if(!routingEnabled) clearRoute(); };
+
 document.getElementById('mode').onchange = function(){ routingMode = this.value; if(routePoints.length===2) fetchRoute(); };
 document.getElementById('resetRoute').onclick = clearRoute;
 
+// Search placeholder logic
+function updateSearchPlaceholder(){
+  if(!routingEnabled) searchBox.placeholder = "Search";
+  else if(routingEnabled && routePoints.length===0) searchBox.placeholder = "Select starting location";
+  else if(routingEnabled && routePoints.length===1) searchBox.placeholder = "Select ending location";
+}
+updateSearchPlaceholder();
+
 // Add markers
-function addMarker(map,lngLat,index,isSearch=false){
+function addMarker(map,lngLat,index,isSearch=false,name=''){
   const m = new maplibregl.Marker({draggable:!isSearch}).setLngLat(lngLat).addTo(map);
-  if(!isSearch){
-    m.on('dragend',()=>{ routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat]; if(routePoints.length===2) fetchRoute(); });
-    markers.push(m);
-  } else {
+  if(isSearch){
     if(searchMarker) searchMarker.remove();
     searchMarker = m;
+    searchMarkerName = name;
+    const el = document.createElement('div'); el.style.fontSize='12px'; el.style.textAlign='center'; el.innerText=name; m.getElement().appendChild(el);
+    if(!routingEnabled){
+      m.getElement().addEventListener('click', ()=>{ searchMarker.remove(); searchMarker = null; searchMarkerName=''; });
+    }
     if(routingEnabled){
       if(routePoints.length===0) routePoints.push([lngLat[0], lngLat[1]]);
-      else if(routePoints.length===1) { routePoints.push([lngLat[0], lngLat[1]]); fetchRoute(); }
+      else if(routePoints.length===1){ routePoints.push([lngLat[0], lngLat[1]]); fetchRoute(); }
     }
+  } else {
+    m.on('dragend',()=>{ routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat]; if(routePoints.length===2) fetchRoute(); });
+    markers.push(m);
   }
 }
 
@@ -220,16 +209,17 @@ function clearRoute(){
   });
 }
 
-// Fetch route
+// Fetch route with delayed loading
+let loadingTimer=null;
 function fetchRoute(){
   if(routePoints.length!==2) return;
-  loadingEl.style.display='block';
+  loadingTimer = setTimeout(()=>{ loadingEl.style.display='block'; }, 700);
   const url = `https://api.openrouteservice.org/v2/directions/${routingMode}/geojson`;
   const body = { coordinates: [routePoints[0], routePoints[1]] };
   fetch(url,{method:'POST', headers:{ "Authorization": ORS_KEY, "Content-Type": "application/json"}, body: JSON.stringify(body)})
   .then(res=>res.json())
   .then(data=>{
-    loadingEl.style.display='none';
+    clearTimeout(loadingTimer); loadingEl.style.display='none';
     if(!data.features || !data.features[0]) return;
     const feature = data.features[0];
     const routeGeoJSON = feature.geometry;
@@ -258,10 +248,9 @@ function onMapClick(e){
 [mapStreets,mapHybrid].forEach(m=>m.on('click',onMapClick));
 
 // Nominatim search with dropdown
-const searchBox = document.getElementById('searchBox');
-const searchResults = document.getElementById('searchResults');
 let debounceTimer;
 searchBox.addEventListener('input', ()=> {
+  updateSearchPlaceholder();
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(()=> {
     const query = searchBox.value;
@@ -280,7 +269,9 @@ searchBox.addEventListener('input', ()=> {
             const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
             const map = currentStyle==='streets'?mapStreets:mapHybrid;
             map.flyTo({center:lngLat, zoom:14});
-            addMarker(map, lngLat, 0, true);
+            addMarker(map, lngLat, 0, true, r.display_name);
+            searchBox.value='';
+            updateSearchPlaceholder();
           };
           searchResults.appendChild(div);
         });
