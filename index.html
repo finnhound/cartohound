@@ -151,25 +151,68 @@ function updateSearchPlaceholder(){
 }
 
 // Add pin logic
-function addPin(map,lngLat,isSearch=false){
-  let svgContent = defaultPinSVG;
-  let draggable = routingEnabled;
-  if(routingEnabled && !startMarker) svgContent = startPinSVG;
-  if(routingEnabled && startMarker && !endMarker) svgContent = endPinSVG;
+function addPin(map, lngLat, isSearch=false){
+    // Limit to max 2 pins
+    if(routePoints.length >= 2){
+        // Remove the first pin (start) if adding a new one
+        if(startMarker){
+            startMarker.remove();
+            markers = markers.filter(m => m !== startMarker);
+            routePoints.shift();
+            startMarker = null;
+        }
+    }
 
-  const el = document.createElement('div');
-  el.style.width = '40px'; el.style.height = '40px'; el.style.cursor = 'pointer'; el.innerHTML = svgContent;
+    let svgContent = defaultPinSVG;
+    let draggable = routingEnabled;
 
-  const m = new maplibregl.Marker({element: el, draggable: draggable}).setLngLat(lngLat).addTo(map);
+    if(routingEnabled && !startMarker) svgContent = startPinSVG;
+    if(routingEnabled && startMarker && !endMarker) svgContent = endPinSVG;
 
-  if(routingEnabled){
-    m.on('dragend', ()=>{
-      const pos = [m.getLngLat().lng,m.getLngLat().lat];
-      if(startMarker===m) routePoints[0]=pos;
-      if(endMarker===m) routePoints[1]=pos;
-      if(routePoints.length===2) fetchRoute();
-    });
-  }
+    const el = document.createElement('div');
+    el.style.width = '40px'; el.style.height = '40px'; 
+    el.style.cursor = 'pointer';
+    el.innerHTML = svgContent;
+
+    const m = new maplibregl.Marker({element: el, draggable: draggable})
+        .setLngLat(lngLat)
+        .addTo(map);
+
+    if(routingEnabled){
+        m.on('dragend', ()=>{
+            const pos = [m.getLngLat().lng, m.getLngLat().lat];
+            if(startMarker===m) routePoints[0]=pos;
+            if(endMarker===m) routePoints[1]=pos;
+            if(routePoints.length===2) fetchRoute();
+        });
+    }
+
+    function removePin(){
+        m.remove();
+        markers = markers.filter(x => x!==m);
+        if(startMarker===m){ startMarker=null; routePoints.shift(); updateSearchPlaceholder(); }
+        if(endMarker===m){ endMarker=null; routePoints.pop(); updateSearchPlaceholder(); }
+        routeInfo.style.display='none';
+        [mapStreets,mapHybrid].forEach(mp=>{
+            if(mp.getLayer('route')) mp.removeLayer('route');
+            if(mp.getSource('route')) mp.removeSource('route');
+        });
+    }
+
+    m.getElement().addEventListener('click', ()=>{ removePin(); });
+
+    if(isSearch){
+        if(!routingEnabled){
+            markers.forEach(mark=>mark.remove());
+            markers=[];
+        }
+        if(routingEnabled){
+            if(!startMarker){ startMarker=m; routePoints[0]=lngLat; updateSearchPlaceholder(); }
+            else if(!endMarker){ endMarker=m; routePoints[1]=lngLat; updateSearchPlaceholder(); fetchRoute(); }
+        } else { markers.push(m); }
+    } else { markers.push(m); }
+}
+
 
   function removePin(){
     m.remove();
@@ -294,6 +337,7 @@ document.getElementById('downloadMap').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
 
 
