@@ -59,7 +59,7 @@
     const KEY = '1xuGVLLA0XJlvXZT2dFB';
 
     const STYLES = {
-      streets: `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=1xuGVLLA0XJlvXZT2dFB{KEY}`,
+      cartofied: `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=1xuGVLLA0XJlvXZT2dFB{KEY}`,
       hybrid: `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`
     };
 
@@ -67,7 +67,7 @@
     const STORAGE_STYLE = 'mapStyle';
 
     const savedView = JSON.parse(localStorage.getItem(STORAGE_VIEW) || 'null');
-    let currentStyle = localStorage.getItem(STORAGE_STYLE) || 'streets';
+    let currentStyle = localStorage.getItem(STORAGE_STYLE) || 'cartofied';
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -81,14 +81,14 @@
     const toggle = document.getElementById('toggle');
 
     map.on('load', () => {
-      toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
+      toggle.textContent = currentStyle === 'cartofied' ? 'Hybrid' : 'cartofied';
     });
 
     toggle.onclick = () => {
-      currentStyle = currentStyle === 'streets' ? 'hybrid' : 'streets';
+      currentStyle = currentStyle === 'cartofied' ? 'hybrid' : 'cartofied';
       map.setStyle(STYLES[currentStyle]);
       localStorage.setItem(STORAGE_STYLE, currentStyle);
-      toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
+      toggle.textContent = currentStyle === 'cartofied' ? 'Hybrid' : 'cartofied';
     };
 
     map.on('moveend', () => {
@@ -105,3 +105,4 @@
 </body>
 
 </html>
+
