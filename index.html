@@ -7,8 +7,8 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
 <style>
-html, body {margin:0; height:100%;}
-.map {width:100%; height:100%; position:absolute; top:0; left:0;}
+html, body { margin:0; height:100%; }
+.map { width:100%; height:100%; position:absolute; top:0; left:0; }
 #controls {
   position:absolute; top:10px; right:10px; z-index:20;
   background:white; padding:10px; border:1px solid #ccc;
@@ -19,8 +19,12 @@ html, body {margin:0; height:100%;}
   background:white; padding:6px 10px; border:1px solid #ccc;
   cursor:pointer; font:14px sans-serif;
 }
-#info {margin-top:5px;}
-button, select {font:14px sans-serif;}
+#info { margin-top:5px; }
+button, select { font:14px sans-serif; }
+.attribution-text {
+  position:absolute; bottom:10px; left:50px; z-index:20; 
+  background:rgba(255,255,255,0.8); padding:4px 8px; font:12px sans-serif;
+}
 .maptiler-logo {
   position:absolute; left:10px; bottom:10px; z-index:20;
 }
@@ -34,9 +38,9 @@ button, select {font:14px sans-serif;}
 <div id="controls">
   <button id="toggleRoute">Enable Routing</button>
   <select id="mode">
-    <option value="car">Car</option>
-    <option value="foot">Walking</option>
-    <option value="bike">Cycling</option>
+    <option value="driving-car">Car</option>
+    <option value="foot-walking">Walking</option>
+    <option value="cycling-regular">Cycling</option>
   </select>
   <button id="resetRoute">Reset Route</button>
   <div id="info"></div>
@@ -44,17 +48,21 @@ button, select {font:14px sans-serif;}
 
 <div id="hybridToggle">Hybrid</div>
 
+<!-- MapTiler logo required -->
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
 </a>
 
-<script>
-const KEY = '1xuGVLLA0XJlvXZT2dFB';
-const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${KEY}`;
-const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`;
+<!-- ORS attribution required -->
+<div class="attribution-text">
+  © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors
+</div>
 
-// Public OSRM hosts (no self‑hosting)
-const OSRM_PUBLIC = "https://routing.openstreetmap.de/route/v1";
+<script>
+const ORS_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjMzkyNDVlOGIyNjQxYjVhMDRhNWEwNjdlMTM4MDc0IiwiaCI6Im11cm11cjY0In0="; 
+const MT_KEY = 'kUOJqqeRX1BMaXctsgK5';
+const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
+const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
 const STORAGE_VIEW = 'mapView';
 const STORAGE_STYLE = 'mapStyle';
@@ -67,6 +75,7 @@ let routingMode = document.getElementById('mode').value;
 
 let routePoints = [];
 let markers = [];
+
 const info = document.getElementById('info');
 
 // Initialize maps
@@ -85,13 +94,13 @@ const mapHybrid = new maplibregl.Map({
   attributionControl:false
 });
 
-// Add navigation + attribution
+// Add navigation & attribution
 [mapStreets, mapHybrid].forEach(m=>{
   m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left');
   m.addControl(new maplibregl.AttributionControl({compact:false}),'bottom-right');
 });
 
-// Hybrid toggle
+// Hybrid style toggle
 const hybridToggle = document.getElementById('hybridToggle');
 function showHybrid(isHybrid){
   if(isHybrid){
@@ -113,7 +122,7 @@ hybridToggle.onclick = ()=>showHybrid(currentStyle==='streets');
 let syncing=false;
 function syncView(src,tgt){
   if(syncing) return;
-  syncing = true;
+  syncing=true;
   const c = src.getCenter(), z=src.getZoom();
   tgt.jumpTo({center:[c.lng,c.lat], zoom:z});
   syncing=false;
@@ -132,7 +141,7 @@ mapHybrid.on('moveend',saveView);
 
 // Routing toggle
 const toggleRouteBtn = document.getElementById('toggleRoute');
-function updateRouteButton(){ toggleRouteBtn.textContent = routingEnabled?'Disable Routing':'Enable Routing';}
+function updateRouteButton(){ toggleRouteBtn.textContent = routingEnabled?'Disable Routing':'Enable Routing'; }
 updateRouteButton();
 toggleRouteBtn.onclick = ()=>{
   routingEnabled = !routingEnabled;
@@ -141,7 +150,7 @@ toggleRouteBtn.onclick = ()=>{
   if(!routingEnabled) clearRoute();
 };
 
-// Mode select
+// Mode selector
 document.getElementById('mode').onchange = function(){
   routingMode = this.value;
   if(routePoints.length===2) fetchRoute();
@@ -151,16 +160,15 @@ document.getElementById('mode').onchange = function(){
 document.getElementById('resetRoute').onclick = clearRoute;
 
 // Add draggable markers
-function addMarker(map,lngLat,i){
+function addMarker(map,lngLat,index){
   const m = new maplibregl.Marker({draggable:true}).setLngLat(lngLat).addTo(map);
   m.on('dragend',()=>{
-    routePoints[i] = [m.getLngLat().lng, m.getLngLat().lat];
+    routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat];
     if(routePoints.length===2) fetchRoute();
   });
   markers.push(m);
 }
 
-// Clear route
 function clearRoute(){
   markers.forEach(m=>m.remove());
   markers=[];
@@ -172,20 +180,34 @@ function clearRoute(){
   routePoints=[];
 }
 
-// Fetch route from public OSRM
+// Fetch route from ORS
 function fetchRoute(){
   if(routePoints.length!==2) return;
-  const coords = `${routePoints[0][0]},${routePoints[0][1]};${routePoints[1][0]},${routePoints[1][1]}`;
-  const url = `${OSRM_PUBLIC}/${routingMode}/${coords}?overview=full&geometries=geojson`;
-  fetch(url).then(res=>res.json()).then(data=>{
-    if(!data.routes || !data.routes[0]) return;
-    const routeGeoJSON = { type:'Feature', geometry:data.routes[0].geometry };
-    const distanceKm = (data.routes[0].distance/1000).toFixed(2);
-    const durationMin = Math.round(data.routes[0].duration/60);
-    info.innerHTML=`Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
+  const url = `https://api.openrouteservice.org/v2/directions/${routingMode}/geojson`;
+  const body = { coordinates: [
+    [routePoints[0][0], routePoints[0][1]],
+    [routePoints[1][0], routePoints[1][1]]
+  ]};
+  fetch(url, {
+    method:'POST',
+    headers:{
+      "Authorization":ORS_KEY,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify(body)
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    if(!data.features || !data.features[0]) return;
+    const feature = data.features[0];
+    const routeGeoJSON = feature.geometry;
+    const distanceKm = (feature.properties.summary.distance/1000).toFixed(2);
+    const durationMin = Math.round(feature.properties.summary.duration/60);
+    info.innerHTML = `Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
+
     [mapStreets,mapHybrid].forEach(m=>{
       if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
-      m.addSource('route',{type:'geojson', data:routeGeoJSON});
+      m.addSource('route',{type:'geojson', data:{type:'Feature', geometry:routeGeoJSON}});
       m.addLayer({id:'route', type:'line', source:'route',
         layout:{'line-cap':'round','line-join':'round'},
         paint:{'line-color':'#0074d9','line-width':5}});
@@ -199,11 +221,10 @@ function onMapClick(e){
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
   if(routePoints.length===2) clearRoute();
   const lngLat=[e.lngLat.lng,e.lngLat.lat];
-  addMarker(map,lngLat, routePoints.length);
+  addMarker(map, lngLat, routePoints.length);
   routePoints.push(lngLat);
   if(routePoints.length===2) fetchRoute();
 }
-
 [mapStreets,mapHybrid].forEach(m=>m.on('click',onMapClick));
 </script>
 
