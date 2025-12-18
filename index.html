@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
@@ -19,14 +18,19 @@ html, body { margin:0; height:100%; }
   background:white; padding:6px 10px; border:1px solid #ccc;
   cursor:pointer; font:14px sans-serif;
 }
-#info { margin-top:5px; }
-button, select { font:14px sans-serif; }
 .attribution-text {
   position:absolute; bottom:10px; left:50px; z-index:20; 
   background:rgba(255,255,255,0.8); padding:4px 8px; font:12px sans-serif;
 }
 .maptiler-logo {
   position:absolute; left:10px; bottom:10px; z-index:20;
+}
+.route-info {
+  position:absolute;
+  top:50px; left:50%; transform:translateX(-50%);
+  background:white; padding:6px 12px; border:1px solid #333;
+  font:14px sans-serif; z-index:20; border-radius:4px;
+  opacity:0.9;
 }
 </style>
 </head>
@@ -43,7 +47,6 @@ button, select { font:14px sans-serif; }
     <option value="cycling-regular">Cycling</option>
   </select>
   <button id="resetRoute">Reset Route</button>
-  <div id="info"></div>
 </div>
 
 <div id="hybridToggle">Hybrid</div>
@@ -58,8 +61,11 @@ button, select { font:14px sans-serif; }
   © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors
 </div>
 
+<!-- Floating route info -->
+<div id="route-info" class="route-info" style="display:none;"></div>
+
 <script>
-const ORS_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjMzkyNDVlOGIyNjQxYjVhMDRhNWEwNjdlMTM4MDc0IiwiaCI6Im11cm11cjY0In0="; 
+const ORS_KEY = "YOUR_ORS_API_KEY";
 const MT_KEY = 'kUOJqqeRX1BMaXctsgK5';
 const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
 const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
@@ -75,8 +81,7 @@ let routingMode = document.getElementById('mode').value;
 
 let routePoints = [];
 let markers = [];
-
-const info = document.getElementById('info');
+const routeInfo = document.getElementById('route-info');
 
 // Initialize maps
 const mapStreets = new maplibregl.Map({
@@ -100,7 +105,7 @@ const mapHybrid = new maplibregl.Map({
   m.addControl(new maplibregl.AttributionControl({compact:false}),'bottom-right');
 });
 
-// Hybrid style toggle
+// Hybrid toggle
 const hybridToggle = document.getElementById('hybridToggle');
 function showHybrid(isHybrid){
   if(isHybrid){
@@ -172,7 +177,7 @@ function addMarker(map,lngLat,index){
 function clearRoute(){
   markers.forEach(m=>m.remove());
   markers=[];
-  info.innerHTML='';
+  routeInfo.style.display='none';
   [mapStreets,mapHybrid].forEach(m=>{
     if(m.getLayer('route')) m.removeLayer('route');
     if(m.getSource('route')) m.removeSource('route');
@@ -203,8 +208,12 @@ function fetchRoute(){
     const routeGeoJSON = feature.geometry;
     const distanceKm = (feature.properties.summary.distance/1000).toFixed(2);
     const durationMin = Math.round(feature.properties.summary.duration/60);
-    info.innerHTML = `Distance: ${distanceKm} km<br>Duration: ${durationMin} min`;
 
+    // Show info box
+    routeInfo.innerHTML = `Distance: ${distanceKm} km &nbsp;|&nbsp; Duration: ${durationMin} min`;
+    routeInfo.style.display='block';
+
+    // Draw route on both maps
     [mapStreets,mapHybrid].forEach(m=>{
       if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
       m.addSource('route',{type:'geojson', data:{type:'Feature', geometry:routeGeoJSON}});
