@@ -45,21 +45,25 @@
   <div id="map"></div>
   <button id="toggle">Hybrid</button>
 
-  <!-- Required MapTiler logo -->
+  <!-- MapTiler logo -->
   <a
     class="maptiler-logo"
     href="https://www.maptiler.com"
     target="_blank"
     rel="noopener"
   >
-    <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
+    <img
+      src="https://api.maptiler.com/resources/logo.svg"
+      alt="MapTiler logo"
+    >
   </a>
 
   <script>
     const KEY = '1xuGVLLA0XJlvXZT2dFB';
 
+    // Updated streets style URL
     const STYLES = {
-      cartofied: `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=1xuGVLLA0XJlvXZT2dFB{KEY}`,
+      streets: `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${KEY}`,
       hybrid: `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`
     };
 
@@ -67,28 +71,37 @@
     const STORAGE_STYLE = 'mapStyle';
 
     const savedView = JSON.parse(localStorage.getItem(STORAGE_VIEW) || 'null');
-    let currentStyle = localStorage.getItem(STORAGE_STYLE) || 'cartofied';
+    let currentStyle = localStorage.getItem(STORAGE_STYLE) || 'streets';
 
     const map = new maplibregl.Map({
       container: 'map',
       style: STYLES[currentStyle],
       center: savedView?.center || [0, 0],
-      zoom: savedView?.zoom ?? 1
+      zoom: savedView?.zoom ?? 1,
+      attributionControl: false
     });
+
+    // Add non-collapsible attribution
+    map.addControl(
+      new maplibregl.AttributionControl({
+        compact: false
+      }),
+      'bottom-right'
+    );
 
     map.addControl(new maplibregl.NavigationControl(), 'top-left');
 
     const toggle = document.getElementById('toggle');
 
     map.on('load', () => {
-      toggle.textContent = currentStyle === 'cartofied' ? 'Hybrid' : 'cartofied';
+      toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
     });
 
     toggle.onclick = () => {
-      currentStyle = currentStyle === 'cartofied' ? 'hybrid' : 'cartofied';
+      currentStyle = currentStyle === 'streets' ? 'hybrid' : 'streets';
       map.setStyle(STYLES[currentStyle]);
       localStorage.setItem(STORAGE_STYLE, currentStyle);
-      toggle.textContent = currentStyle === 'cartofied' ? 'Hybrid' : 'cartofied';
+      toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
     };
 
     map.on('moveend', () => {
@@ -103,6 +116,4 @@
     });
   </script>
 </body>
-
 </html>
-
