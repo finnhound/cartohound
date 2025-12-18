@@ -1,119 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-
-  <link
-    href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
-    rel="stylesheet"
-  />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    #toggle {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 10;
-      padding: 6px 10px;
-      background: white;
-      border: 1px solid #ccc;
-      cursor: pointer;
-      font: 14px sans-serif;
-    }
-
-    .maptiler-logo {
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
-      z-index: 10;
-    }
-  </style>
+<meta charset="utf-8">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  html, body { margin:0; height:100%; }
+  #map { width:100%; height:100%; }
+  #toggle {
+    position:absolute; top:10px; right:10px; z-index:10;
+    padding:6px 10px; background:white; border:1px solid #ccc; cursor:pointer;
+    font:14px sans-serif;
+  }
+  .maptiler-logo {
+    position:absolute; left:10px; bottom:10px; z-index:10;
+  }
+</style>
 </head>
-
 <body>
-  <div id="map"></div>
-  <button id="toggle">Hybrid</button>
+<div id="map"></div>
+<button id="toggle">Hybrid</button>
+<a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
+  <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
+</a>
 
-  <!-- MapTiler logo -->
-  <a
-    class="maptiler-logo"
-    href="https://www.maptiler.com"
-    target="_blank"
-    rel="noopener"
-  >
-    <img
-      src="https://api.maptiler.com/resources/logo.svg"
-      alt="MapTiler logo"
-    >
-  </a>
+<script>
+const KEY = '1xuGVLLA0XJlvXZT2dFB';
 
-  <script>
-    const KEY = '1xuGVLLA0XJlvXZT2dFB';
+// Custom streets + hybrid
+const STYLES = {
+  streets: `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${KEY}`,
+  hybrid: `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`
+};
 
-    // Updated streets style URL
-    const STYLES = {
-      streets: `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${KEY}`,
-      hybrid: `https://api.maptiler.com/maps/hybrid/style.json?key=${KEY}`
-    };
+const STORAGE_VIEW = 'mapView';
+const STORAGE_STYLE = 'mapStyle';
 
-    const STORAGE_VIEW = 'mapView';
-    const STORAGE_STYLE = 'mapStyle';
+const savedView = JSON.parse(localStorage.getItem(STORAGE_VIEW) || 'null');
+let currentStyle = localStorage.getItem(STORAGE_STYLE) || 'streets';
 
-    const savedView = JSON.parse(localStorage.getItem(STORAGE_VIEW) || 'null');
-    let currentStyle = localStorage.getItem(STORAGE_STYLE) || 'streets';
+const map = new maplibregl.Map({
+  container: 'map',
+  style: STYLES[currentStyle],
+  center: savedView?.center || [0,0],
+  zoom: savedView?.zoom ?? 1,
+  attributionControl: false
+});
 
-    const map = new maplibregl.Map({
-      container: 'map',
-      style: STYLES[currentStyle],
-      center: savedView?.center || [0, 0],
-      zoom: savedView?.zoom ?? 1,
-      attributionControl: false
-    });
+// Add non-collapsible attribution
+map.addControl(new maplibregl.AttributionControl({ compact:false }), 'bottom-right');
+map.addControl(new maplibregl.NavigationControl(), 'top-left');
 
-    // Add non-collapsible attribution
-    map.addControl(
-      new maplibregl.AttributionControl({
-        compact: false
-      }),
-      'bottom-right'
-    );
+const toggle = document.getElementById('toggle');
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-left');
+// Function to switch styles safely
+function switchStyle(name) {
+  map.setStyle(STYLES[name]);
+  map.once('styledata', () => {
+    // Update toggle text only after new style fully loaded
+    toggle.textContent = name === 'streets' ? 'Hybrid' : 'Streets';
+    currentStyle = name;
+    localStorage.setItem(STORAGE_STYLE, currentStyle);
+  });
+}
 
-    const toggle = document.getElementById('toggle');
+// Initialize toggle button
+map.on('load', () => {
+  toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
+});
 
-    map.on('load', () => {
-      toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
-    });
+toggle.onclick = () => {
+  const newStyle = currentStyle === 'streets' ? 'hybrid' : 'streets';
+  switchStyle(newStyle);
+};
 
-    toggle.onclick = () => {
-      currentStyle = currentStyle === 'streets' ? 'hybrid' : 'streets';
-      map.setStyle(STYLES[currentStyle]);
-      localStorage.setItem(STORAGE_STYLE, currentStyle);
-      toggle.textContent = currentStyle === 'streets' ? 'Hybrid' : 'Streets';
-    };
-
-    map.on('moveend', () => {
-      const c = map.getCenter();
-      localStorage.setItem(
-        STORAGE_VIEW,
-        JSON.stringify({
-          center: [c.lng, c.lat],
-          zoom: map.getZoom()
-        })
-      );
-    });
-  </script>
+// Save view on moveend
+map.on('moveend', () => {
+  const c = map.getCenter();
+  localStorage.setItem(STORAGE_VIEW, JSON.stringify({
+    center: [c.lng, c.lat],
+    zoom: map.getZoom()
+  }));
+});
+</script>
 </body>
 </html>
