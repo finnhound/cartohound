@@ -14,6 +14,9 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 #hybridToggle.active { background:#ddd; }
 #hybridToggle img { width:24px; height:24px; }
 
+#downloadMap { position:absolute; top:130px; right:10px; z-index:20; background:white; padding:8px; border-radius:6px; border:1px solid #ccc; cursor:pointer; width:40px; height:40px; display:flex; align-items:center; justify-content:center; }
+#downloadMap svg { width:24px; height:24px; }
+
 button, select, input { font:14px 'Inter', sans-serif; }
 
 #searchBox { width:200px; padding:4px; border-radius:4px; border:1px solid #ccc; z-index:26; position:relative; }
@@ -44,6 +47,13 @@ button, select, input { font:14px 'Inter', sans-serif; }
     <option value="cycling-regular">Cycling</option>
   </select>
   <button id="resetRoute">Reset Route</button>
+</div>
+
+<div id="downloadMap" title="Download Map">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+    <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/>
+  </svg>
 </div>
 
 <div id="hybridToggle">
@@ -86,8 +96,8 @@ const startPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="
 const endPinSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 
 // Initialize maps
-const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false });
-const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false });
+const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
+const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
 [mapStreets,mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
 
 // Hybrid toggle
@@ -117,11 +127,7 @@ updateRouteButton();
 toggleRouteBtn.onclick = ()=>{ routingEnabled = !routingEnabled; localStorage.setItem('mapRouteEnabled',routingEnabled); updateRouteButton(); if(!routingEnabled){ clearRoute(); startMarker=null; endMarker=null; } };
 
 document.getElementById('mode').onchange = function(){ routingMode = this.value; if(routePoints.length===2) fetchRoute(); };
-document.getElementById('resetRoute').onclick = ()=>{
-  clearRoute();
-  startMarker=null; endMarker=null;
-  if(routingEnabled) searchBox.placeholder = "Select starting location";
-};
+document.getElementById('resetRoute').onclick = ()=>{ clearRoute(); startMarker=null; endMarker=null; if(routingEnabled) searchBox.placeholder = "Select starting location"; };
 
 // Search placeholder logic
 function updateSearchPlaceholder(){
@@ -161,10 +167,7 @@ function addPin(map,lngLat,isSearch=false){
     [mapStreets,mapHybrid].forEach(mp=>{ if(mp.getLayer('route')) mp.removeLayer('route'); if(mp.getSource('route')) mp.removeSource('route'); });
   }
 
-  m.getElement().addEventListener('click', ()=>{ 
-    if(!routingEnabled) removePin();
-    else removePin(); 
-  });
+  m.getElement().addEventListener('click', ()=>{ removePin(); });
 
   if(isSearch){
     if(!routingEnabled){
@@ -212,11 +215,11 @@ function fetchRoute(){
       m.addSource('route',{type:'geojson', data:{type:'Feature', geometry:routeGeoJSON}});
       m.addLayer({id:'route', type:'line', source:'route', layout:{'line-cap':'round','line-join':'round'}, paint:{'line-color':'#0074d9','line-width':5}});
     });
-    // Fit route bounds
+    // Fit route bounds (zoom out a bit more)
     const coords = routeGeoJSON.coordinates;
     const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coords[0], coords[0]));
     const activeMap = currentStyle==='streets'?mapStreets:mapHybrid;
-    activeMap.fitBounds(bounds, {padding:50});
+    activeMap.fitBounds(bounds, {padding:100}); // increased padding
   });
 }
 
@@ -262,6 +265,19 @@ searchBox.addEventListener('input', ()=>{
 });
 document.addEventListener('click', e=> { if(!searchResults.contains(e.target) && e.target!==searchBox) searchResults.style.display='none'; });
 
+// Download map
+document.getElementById('downloadMap').onclick = ()=>{
+  const map = currentStyle==='streets'?mapStreets:mapHybrid;
+  const canvas = map.getCanvas();
+  canvas.toBlob(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'map.png';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+};
 </script>
 </body>
 </html>
