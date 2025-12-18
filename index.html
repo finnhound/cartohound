@@ -150,27 +150,22 @@ function updateSearchPlaceholder(){
   else searchBox.placeholder = "Select starting location";
 }
 
-function addPin(map, lngLat, isSearch=false){
-    // If routing is enabled, limit to max 2 pins
-    if(routingEnabled && routePoints.length >= 2) {
-        // Remove the oldest pin (startMarker) to make room
-        if(startMarker){
-            startMarker.remove();
-            markers = markers.filter(m => m !== startMarker);
-            routePoints.shift();
-            startMarker = endMarker; // shift endMarker to startMarker
-            endMarker = null;
-        }
+function addPin(map, lngLat, isSearch=false) {
+    // Prevent adding more than 2 pins if routing is enabled
+    if (routingEnabled && routePoints.length >= 2) {
+        alert("Only 2 pins allowed for routing.");
+        return;
     }
 
     let svgContent = defaultPinSVG;
     let draggable = routingEnabled;
 
-    if(routingEnabled && !startMarker) svgContent = startPinSVG;
-    if(routingEnabled && startMarker && !endMarker) svgContent = endPinSVG;
+    if (routingEnabled && !startMarker) svgContent = startPinSVG;
+    if (routingEnabled && startMarker && !endMarker) svgContent = endPinSVG;
 
     const el = document.createElement('div');
-    el.style.width = '40px'; el.style.height = '40px';
+    el.style.width = '40px';
+    el.style.height = '40px';
     el.style.cursor = 'pointer';
     el.innerHTML = svgContent;
 
@@ -178,26 +173,41 @@ function addPin(map, lngLat, isSearch=false){
         .setLngLat(lngLat)
         .addTo(map);
 
-    if(routingEnabled){
-        m.on('dragend', ()=>{
+    if (routingEnabled) {
+        m.on('dragend', () => {
             const pos = [m.getLngLat().lng, m.getLngLat().lat];
-            if(startMarker===m) routePoints[0]=pos;
-            if(endMarker===m) routePoints[1]=pos;
-            if(routePoints.length===2) fetchRoute();
+            if (startMarker === m) routePoints[0] = pos;
+            if (endMarker === m) routePoints[1] = pos;
+            if (routePoints.length === 2) fetchRoute();
         });
     }
 
-    function removePin(){
+    function removePin() {
         m.remove();
-        markers = markers.filter(x => x!==m);
-        if(startMarker===m){ startMarker=null; routePoints.shift(); updateSearchPlaceholder(); }
-        if(endMarker===m){ endMarker=null; routePoints.pop(); updateSearchPlaceholder(); }
-        routeInfo.style.display='none';
-        [mapStreets,mapHybrid].forEach(mp=>{
-            if(mp.getLayer('route')) mp.removeLayer('route');
-            if(mp.getSource('route')) mp.removeSource('route');
+        markers = markers.filter(x => x !== m);
+        if (startMarker === m) { startMarker = null; routePoints.shift(); updateSearchPlaceholder(); }
+        if (endMarker === m) { endMarker = null; routePoints.pop(); updateSearchPlaceholder(); }
+        routeInfo.style.display = 'none';
+        [mapStreets, mapHybrid].forEach(mp => {
+            if (mp.getLayer('route')) mp.removeLayer('route');
+            if (mp.getSource('route')) mp.removeSource('route');
         });
     }
+
+    m.getElement().addEventListener('click', () => { removePin(); });
+
+    if (isSearch) {
+        if (!routingEnabled) {
+            markers.forEach(mark => mark.remove());
+            markers = [];
+        }
+        if (routingEnabled) {
+            if (!startMarker) { startMarker = m; routePoints[0] = lngLat; updateSearchPlaceholder(); }
+            else if (!endMarker) { endMarker = m; routePoints[1] = lngLat; updateSearchPlaceholder(); fetchRoute(); }
+        } else { markers.push(m); }
+    } else { markers.push(m); }
+}
+
 
     m.getElement().addEventListener('click', ()=>{ removePin(); });
 
@@ -352,6 +362,7 @@ document.getElementById('downloadMap').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
 
 
