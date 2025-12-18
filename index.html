@@ -127,8 +127,8 @@ let routingMode = document.getElementById('mode').value;
 
 let routePoints = [];
 let markers = [];
-let searchMarker = null;
-let searchMarkerName = '';
+let startMarker = null;
+let endMarker = null;
 const routeInfo = document.getElementById('route-info');
 const loadingEl = document.getElementById('loading');
 const searchBox = document.getElementById('searchBox');
@@ -163,43 +163,55 @@ mapStreets.on('moveend', saveView); mapHybrid.on('moveend', saveView);
 const toggleRouteBtn = document.getElementById('toggleRoute');
 function updateRouteButton(){ toggleRouteBtn.textContent = routingEnabled?'Disable Routing':'Enable Routing'; updateSearchPlaceholder(); }
 updateRouteButton();
-toggleRouteBtn.onclick = ()=>{ routingEnabled = !routingEnabled; localStorage.setItem('mapRouteEnabled',routingEnabled); updateRouteButton(); if(!routingEnabled) clearRoute(); };
+toggleRouteBtn.onclick = ()=>{ routingEnabled = !routingEnabled; localStorage.setItem('mapRouteEnabled',routingEnabled); updateRouteButton(); if(!routingEnabled){ clearRoute(); startMarker=null; endMarker=null; } };
 
 document.getElementById('mode').onchange = function(){ routingMode = this.value; if(routePoints.length===2) fetchRoute(); };
-document.getElementById('resetRoute').onclick = clearRoute;
+document.getElementById('resetRoute').onclick = ()=>{
+  clearRoute();
+  startMarker=null;
+  endMarker=null;
+};
 
 // Search placeholder logic
 function updateSearchPlaceholder(){
   if(!routingEnabled) searchBox.placeholder = "Search";
-  else if(routingEnabled && routePoints.length===0) searchBox.placeholder = "Select starting location";
-  else if(routingEnabled && routePoints.length===1) searchBox.placeholder = "Select ending location";
+  else if(routingEnabled && !startMarker) searchBox.placeholder = "Select starting location";
+  else if(routingEnabled && startMarker) searchBox.placeholder = "Select ending location";
 }
 updateSearchPlaceholder();
 
-// Add markers
-function addMarker(map,lngLat,index,isSearch=false,name=''){
-  const m = new maplibregl.Marker({draggable:!isSearch}).setLngLat(lngLat).addTo(map);
+// Add pin logic
+function addPin(map,lngLat,isSearch=false){
+  const m = new maplibregl.Marker({draggable:!routingEnabled}).setLngLat(lngLat).addTo(map);
+  m.getElement().style.cursor = 'pointer';
   if(isSearch){
-    if(searchMarker) searchMarker.remove();
-    searchMarker = m;
-    searchMarkerName = name
-    if(!routingEnabled){
-      m.getElement().addEventListener('click', ()=>{ searchMarker.remove(); searchMarker = null; searchMarkerName=''; });
+    if(!routingEnabled && searchBox.value!==''){
+      markers.forEach(mark=>mark.remove());
+      markers=[];
     }
     if(routingEnabled){
-      if(routePoints.length===0) routePoints.push([lngLat[0], lngLat[1]]);
-      else if(routePoints.length===1){ routePoints.push([lngLat[0], lngLat[1]]); fetchRoute(); }
-    }
+      if(!startMarker){ 
+        if(startMarker) startMarker.remove(); 
+        startMarker=m; routePoints[0]=lngLat;
+      } else { 
+        if(endMarker) endMarker.remove(); 
+        endMarker=m; routePoints[1]=lngLat; 
+        fetchRoute(); 
+      }
+    } else { markers.push(m); }
+    m.getElement().addEventListener('click', ()=>{ if(!routingEnabled) { m.remove(); markers=markers.filter(x=>x!==m); } });
   } else {
-    m.on('dragend',()=>{ routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat]; if(routePoints.length===2) fetchRoute(); });
     markers.push(m);
+    m.on('dragend',()=>{ routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat]; if(routePoints.length===2) fetchRoute(); });
   }
 }
 
-// Clear routing
+// Clear route
 function clearRoute(){
   markers.forEach(m=>m.remove());
   markers=[];
+  if(startMarker){ startMarker.remove(); startMarker=null; }
+  if(endMarker){ endMarker.remove(); endMarker=null; }
   routePoints=[];
   routeInfo.style.display='none';
   [mapStreets,mapHybrid].forEach(m=>{
@@ -236,19 +248,14 @@ function fetchRoute(){
 
 // Map clicks for routing
 function onMapClick(e){
-  if(!routingEnabled) return;
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
-  if(routePoints.length===2) clearRoute();
-  const lngLat=[e.lngLat.lng,e.lngLat.lat];
-  addMarker(map, lngLat, routePoints.length);
-  routePoints.push(lngLat);
-  if(routePoints.length===2) fetchRoute();
+  addPin(map,[e.lngLat.lng,e.lngLat.lat], true);
 }
 [mapStreets,mapHybrid].forEach(m=>m.on('click',onMapClick));
 
-// Nominatim search with dropdown
+// Nominatim search
 let debounceTimer;
-searchBox.addEventListener('input', ()=> {
+searchBox.addEventListener('input', ()=>{
   updateSearchPlaceholder();
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(()=> {
@@ -268,7 +275,7 @@ searchBox.addEventListener('input', ()=> {
             const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
             const map = currentStyle==='streets'?mapStreets:mapHybrid;
             map.flyTo({center:lngLat, zoom:14});
-            addMarker(map, lngLat, 0, true, r.display_name);
+            addPin(map,lngLat,true);
             searchBox.value='';
             updateSearchPlaceholder();
           };
@@ -282,4 +289,3 @@ document.addEventListener('click', e=> { if(!searchResults.contains(e.target) &&
 </script>
 </body>
 </html>
-
