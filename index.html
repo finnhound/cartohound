@@ -35,6 +35,27 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
   border-radius: 4px;
   border: 1px solid #ccc;
 }
+#searchResults {
+  position: absolute;
+  top: 38px;
+  right: 10px;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 180px;
+  overflow-y: auto;
+  width: 200px;
+  z-index: 30;
+  border-radius: 4px;
+  display: none;
+}
+
+.searchItem {
+  padding: 4px 6px;
+  cursor: pointer;
+}
+.searchItem:hover {
+  background: #eee;
+}
 
 .route-info {
   position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
@@ -42,6 +63,13 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
   font: 14px 'Inter', system-ui, sans-serif; z-index: 20;
   border-radius: 6px; opacity: 0.9;
   pointer-events: none;
+}
+
+.loading {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  background: yellow; padding: 6px 12px; border-radius: 4px;
+  z-index: 40; font-weight: bold;
+  display: none;
 }
 
 .attribution-text {
@@ -63,6 +91,7 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
 
 <div id="controls">
   <input id="searchBox" type="text" placeholder="Search location..."/>
+  <div id="searchResults"></div>
   <button id="toggleRoute">Enable Routing</button>
   <select id="mode">
     <option value="driving-car">Car</option>
@@ -77,6 +106,7 @@ button, select, input { font: 14px 'Inter', system-ui, sans-serif; }
 </div>
 
 <div id="route-info" class="route-info" style="display:none;"></div>
+<div id="loading" class="loading">Loading...</div>
 
 <div class="attribution-text">
   © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors | Tiles © MapTiler
@@ -98,8 +128,9 @@ let routingMode = document.getElementById('mode').value;
 
 let routePoints = [];
 let markers = [];
-let searchMarkers = [];
+let searchMarker = null;
 const routeInfo = document.getElementById('route-info');
+const loadingEl = document.getElementById('loading');
 
 // Initialize maps
 const mapStreets = new maplibregl.Map({
@@ -116,8 +147,6 @@ const mapHybrid = new maplibregl.Map({
   zoom: savedView?.zoom ?? 1,
   attributionControl:false
 });
-
-// Add navigation controls
 [mapStreets, mapHybrid].forEach(m=>{
   m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left');
 });
@@ -141,24 +170,12 @@ function showHybrid(isHybrid) {
 showHybrid(currentStyle==='hybrid');
 hybridToggleEl.onclick = ()=>showHybrid(currentStyle==='streets');
 
-// Sync maps
+// Sync & persist map views
 let syncing=false;
-function syncView(src,tgt) {
-  if(syncing) return;
-  syncing=true;
-  const c = src.getCenter(), z = src.getZoom();
-  tgt.jumpTo({center:[c.lng,c.lat], zoom:z});
-  syncing=false;
-}
+function syncView(src,tgt){ if(syncing) return; syncing=true; const c=src.getCenter(), z=src.getZoom(); tgt.jumpTo({center:[c.lng,c.lat], zoom:z}); syncing=false; }
 mapStreets.on('move',()=>syncView(mapStreets,mapHybrid));
 mapHybrid.on('move',()=>syncView(mapHybrid,mapStreets));
-
-// Persist view
-function saveView(){
-  const activeMap = currentStyle==='streets'?mapStreets:mapHybrid;
-  const c=activeMap.getCenter(), z=activeMap.getZoom();
-  localStorage.setItem('mapView',JSON.stringify({center:[c.lng,c.lat], zoom:z}));
-}
+function saveView(){ const activeMap = currentStyle==='streets'?mapStreets:mapHybrid; const c=activeMap.getCenter(), z=activeMap.getZoom(); localStorage.setItem('mapView',JSON.stringify({center:[c.lng,c.lat], zoom:z})); }
 mapStreets.on('moveend', saveView);
 mapHybrid.on('moveend', saveView);
 
@@ -172,76 +189,63 @@ toggleRouteBtn.onclick = ()=>{
   updateRouteButton();
   if(!routingEnabled) clearRoute();
 };
-
-document.getElementById('mode').onchange = function(){
-  routingMode = this.value;
-  if(routePoints.length===2) fetchRoute();
-};
+document.getElementById('mode').onchange = function(){ routingMode = this.value; if(routePoints.length===2) fetchRoute(); };
 document.getElementById('resetRoute').onclick = clearRoute;
 
-// Add draggable markers
-function addMarker(map,lngLat,index, isSearch=false){
+// Add markers
+function addMarker(map,lngLat,index,isSearch=false){
   const m = new maplibregl.Marker({draggable:!isSearch}).setLngLat(lngLat).addTo(map);
   if(!isSearch){
-    m.on('dragend',()=>{
-      routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat];
-      if(routePoints.length===2) fetchRoute();
-    });
+    m.on('dragend',()=>{ routePoints[index] = [m.getLngLat().lng, m.getLngLat().lat]; if(routePoints.length===2) fetchRoute(); });
     markers.push(m);
   } else {
-    searchMarkers.push(m);
+    if(searchMarker) searchMarker.remove();
+    searchMarker = m;
+    if(routingEnabled){
+      if(routePoints.length===0) routePoints.push([lngLat[0], lngLat[1]]);
+      else if(routePoints.length===1) { routePoints.push([lngLat[0], lngLat[1]]); fetchRoute(); }
+    }
   }
 }
 
+// Clear routing
 function clearRoute(){
   markers.forEach(m=>m.remove());
   markers=[];
+  routePoints=[];
   routeInfo.style.display='none';
   [mapStreets,mapHybrid].forEach(m=>{
     if(m.getLayer('route')) m.removeLayer('route');
     if(m.getSource('route')) m.removeSource('route');
   });
-  routePoints=[];
 }
 
-// Fetch route from ORS
+// Fetch route
 function fetchRoute(){
   if(routePoints.length!==2) return;
+  loadingEl.style.display='block';
   const url = `https://api.openrouteservice.org/v2/directions/${routingMode}/geojson`;
-  const body = { coordinates: [
-    [routePoints[0][0], routePoints[0][1]],
-    [routePoints[1][0], routePoints[1][1]]
-  ]};
-  fetch(url, {
-    method:'POST',
-    headers:{
-      "Authorization": ORS_KEY,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  })
+  const body = { coordinates: [routePoints[0], routePoints[1]] };
+  fetch(url,{method:'POST', headers:{ "Authorization": ORS_KEY, "Content-Type": "application/json"}, body: JSON.stringify(body)})
   .then(res=>res.json())
   .then(data=>{
+    loadingEl.style.display='none';
     if(!data.features || !data.features[0]) return;
     const feature = data.features[0];
     const routeGeoJSON = feature.geometry;
     const distanceKm = (feature.properties.summary.distance/1000).toFixed(2);
     const durationMin = Math.round(feature.properties.summary.duration/60);
-
-    routeInfo.innerHTML = `Distance: ${distanceKm} km &nbsp;|&nbsp; Duration: ${durationMin} min`;
+    routeInfo.innerHTML = `Distance: ${distanceKm} km | Duration: ${durationMin} min`;
     routeInfo.style.display='block';
-
     [mapStreets,mapHybrid].forEach(m=>{
       if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
       m.addSource('route',{type:'geojson', data:{type:'Feature', geometry:routeGeoJSON}});
-      m.addLayer({id:'route', type:'line', source:'route',
-        layout:{'line-cap':'round','line-join':'round'},
-        paint:{'line-color':'#0074d9','line-width':5}});
+      m.addLayer({id:'route', type:'line', source:'route', layout:{'line-cap':'round','line-join':'round'}, paint:{'line-color':'#0074d9','line-width':5}});
     });
   });
 }
 
-// Map click
+// Map clicks for routing
 function onMapClick(e){
   if(!routingEnabled) return;
   const map = currentStyle==='streets'?mapStreets:mapHybrid;
@@ -253,30 +257,38 @@ function onMapClick(e){
 }
 [mapStreets,mapHybrid].forEach(m=>m.on('click',onMapClick));
 
-// Nominatim search
-document.getElementById('searchBox').addEventListener('keydown', function(e){
-  if(e.key==='Enter'){
-    const query = e.target.value;
-    if(!query) return;
+// Nominatim search with dropdown
+const searchBox = document.getElementById('searchBox');
+const searchResults = document.getElementById('searchResults');
+let debounceTimer;
+searchBox.addEventListener('input', ()=> {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(()=> {
+    const query = searchBox.value;
+    if(!query) { searchResults.style.display='none'; return; }
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
       .then(res=>res.json())
       .then(results=>{
-        if(!results || results.length===0) return;
-        // Clear old search markers
-        searchMarkers.forEach(m=>m.remove());
-        searchMarkers = [];
-        const map = currentStyle==='streets'?mapStreets:mapHybrid;
+        searchResults.innerHTML='';
+        if(!results || results.length===0) { searchResults.style.display='none'; return; }
         results.slice(0,5).forEach(r=>{
-          const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
-          addMarker(map, lngLat, 0, true);
+          const div = document.createElement('div');
+          div.className='searchItem';
+          div.textContent=r.display_name;
+          div.onclick=()=> {
+            searchResults.style.display='none';
+            const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
+            const map = currentStyle==='streets'?mapStreets:mapHybrid;
+            map.flyTo({center:lngLat, zoom:14});
+            addMarker(map, lngLat, 0, true);
+          };
+          searchResults.appendChild(div);
         });
-        // Zoom to first result
-        const first = results[0];
-        map.flyTo({center:[parseFloat(first.lon), parseFloat(first.lat)], zoom:14});
+        searchResults.style.display='block';
       });
-  }
+  },300);
 });
+document.addEventListener('click', e=> { if(!searchResults.contains(e.target) && e.target!==searchBox) searchResults.style.display='none'; });
 </script>
-
 </body>
 </html>
