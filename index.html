@@ -56,13 +56,12 @@ const mapHybrid = new maplibregl.Map({
   attributionControl:false
 });
 
-// Add attribution & navigation
+// Add controls
 [mapStreets, mapHybrid].forEach(map => {
   map.addControl(new maplibregl.NavigationControl(), 'top-left');
   map.addControl(new maplibregl.AttributionControl({compact:false}), 'bottom-right');
 });
 
-// Toggle button
 const toggle = document.getElementById('toggle');
 
 function showMap(style) {
@@ -82,14 +81,33 @@ function showMap(style) {
 // Initialize button text & visibility
 showMap(currentStyle);
 
+// ======================= Sync Views =======================
+let syncing = false;
+
+function syncView(sourceMap, targetMap) {
+  if(syncing) return;
+  syncing = true;
+  const c = sourceMap.getCenter();
+  const z = sourceMap.getZoom();
+  targetMap.jumpTo({center:[c.lng,c.lat], zoom:z});
+  syncing = false;
+}
+
+// Sync both ways
+mapStreets.on('move', () => syncView(mapStreets, mapHybrid));
+mapHybrid.on('move', () => syncView(mapHybrid, mapStreets));
+
+// Toggle click
 toggle.onclick = () => {
-  showMap(currentStyle==='streets'?'hybrid':'streets');
+  const newStyle = currentStyle==='streets'?'hybrid':'streets';
+  showMap(newStyle);
 };
 
-// Persist view: sync both maps
+// Save view on moveend
 function saveView() {
-  const c = (currentStyle==='streets'?mapStreets:mapHybrid).getCenter();
-  const z = (currentStyle==='streets'?mapStreets:mapHybrid).getZoom();
+  const activeMap = currentStyle==='streets'?mapStreets:mapHybrid;
+  const c = activeMap.getCenter();
+  const z = activeMap.getZoom();
   localStorage.setItem(STORAGE_VIEW, JSON.stringify({center:[c.lng,c.lat], zoom:z}));
 }
 
