@@ -2,27 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Cartohound Map – Full Features</title>
-
+<title>Cartohound Map – Styled ORS Routing</title>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-
 <style>
 html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 #map-streets,#map-hybrid { position:absolute; inset:0; }
 #map-hybrid { display:none; }
 
 #searchWrap { position:absolute; top:10px; left:10px; width:280px; z-index:20; }
-#search { width:100%; padding:10px 14px; border-radius:999px; border:1px solid #bbb; font-size:15px; }
-#results { display:none; margin-top:6px; border-radius:12px; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; }
+#search { width:100%; padding:10px 14px; border-radius:24px; border:1px solid #bbb; font-size:15px; box-shadow:0 2px 6px rgba(0,0,0,0.15); }
+#results { display:none; margin-top:6px; border-radius:12px; background:white; border:1px solid #ccc; max-height:200px; overflow-y:auto; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 .result { padding:8px 12px; cursor:pointer; }
 .result:hover { background:#eee; }
 
 #buttons { position:absolute; bottom:20px; left:10px; z-index:20; display:flex; gap:10px; }
-.btn { width:44px; height:44px; border-radius:10px; border:1px solid #ccc; background:white; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.btn { width:44px; height:44px; border-radius:10px; border:1px solid #ccc; background:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s; }
+.btn:hover { background:#f0f0f0; }
 .btn img, .btn svg { width:22px; height:22px; }
 
-#routeInfo { position:absolute; top:60px; left:50%; transform:translateX(-50%); background:white; padding:8px 14px; border-radius:6px; font-size:14px; opacity:0.9; z-index:25; display:none; pointer-events:none; }
+#routeInfo { position:absolute; top:60px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.9); padding:10px 16px; border-radius:8px; font-size:14px; z-index:25; display:none; pointer-events:none; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
 .loading { position:absolute; top:50px; left:50%; transform:translateX(-50%); background:yellow; padding:6px 12px; border-radius:4px; font-weight:bold; display:none; z-index:30; }
 
 .attribution-text { position:absolute; bottom:10px; right:10px; z-index:25; background:rgba(255,255,255,0.85); padding:6px 10px; font:12px 'Inter', sans-serif; border-radius:6px; }
@@ -62,102 +61,92 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 </a>
 
 <script>
-/* ======= CONFIG ======= */
 const ORS_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjFjMzkyNDVlOGIyNjQxYjVhMDRhNWEwNjdlMTM4MDc0IiwiaCI6Im11cm11cjY0In0=";
-const MT_KEY = 'kUOJqqeRX1BMaXctsgK5';
-const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
-const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
+const MT_KEY='kUOJqqeRX1BMaXctsgK5';
+const STREETS_URL=`https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
+const HYBRID_URL=`https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
-let currentStyle = 'streets';
-let hybrid = false;
-let routingEnabled = false;
-let routingMode = 'driving-car';
-let routePoints = [];
-let markers = [];
+let hybrid=false;
+let routingEnabled=true;
+let routingMode='driving-car';
+let routePoints=[];
+let markers=[];
 let startMarker=null, endMarker=null;
 
-/* SVG pins */
+/* Pin SVGs */
 const defaultPinSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 const startPinSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00c7be" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 const endPinSVG=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 
-/* ======= MAP INIT ======= */
-const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center:[0,0], zoom:2, attributionControl:true, preserveDrawingBuffer:true });
-const mapHybrid  = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center:[0,0], zoom:2, attributionControl:true, preserveDrawingBuffer:true });
+/* ===== INIT MAPS ===== */
+const mapStreets = new maplibregl.Map({container:'map-streets',style:STREETS_URL,center:[0,0],zoom:2, attributionControl:true, preserveDrawingBuffer:true});
+const mapHybrid = new maplibregl.Map({container:'map-hybrid',style:HYBRID_URL,center:[0,0],zoom:2, attributionControl:true, preserveDrawingBuffer:true});
 
-[mapStreets,mapHybrid].forEach(m=>{
-  m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'bottom-right');
-});
+[mapStreets,mapHybrid].forEach(m=>m.addControl(new maplibregl.NavigationControl({showZoom:true,showCompass:true}),'bottom-right'));
 
-/* ======= SYNC MAPS ======= */
+/* ===== SYNC ===== */
 let syncing=false;
-function sync(a,b){ if(syncing) return; syncing=true; b.jumpTo({center:a.getCenter(), zoom:a.getZoom()}); syncing=false; }
-mapStreets.on('move', ()=>sync(mapStreets,mapHybrid));
-mapHybrid.on('move', ()=>sync(mapHybrid,mapStreets));
+function sync(a,b){ if(syncing) return; syncing=true; b.jumpTo({center:a.getCenter(),zoom:a.getZoom()}); syncing=false; }
+mapStreets.on('move',()=>sync(mapStreets,mapHybrid));
+mapHybrid.on('move',()=>sync(mapHybrid,mapStreets));
 
-/* ======= HYBRID TOGGLE ======= */
-const toggleLayer = document.getElementById('toggleLayer');
-toggleLayer.onclick = () => {
-  hybrid = !hybrid;
-  document.getElementById('map-streets').style.display = hybrid?'none':'block';
-  document.getElementById('map-hybrid').style.display = hybrid?'block':'none';
+/* ===== LAYER TOGGLE ===== */
+document.getElementById('toggleLayer').onclick=()=>{
+  hybrid=!hybrid;
+  document.getElementById('map-streets').style.display=hybrid?'none':'block';
+  document.getElementById('map-hybrid').style.display=hybrid?'block':'none';
   (hybrid?mapHybrid:mapStreets).resize();
 };
 
-/* ======= SEARCH ======= */
+/* ===== SEARCH ===== */
 const searchBox=document.getElementById('search');
 const searchResults=document.getElementById('results');
 let debounce;
 
-searchBox.addEventListener('input', ()=>{
+searchBox.addEventListener('input',()=>{
   clearTimeout(debounce);
   debounce=setTimeout(()=>{
     const q=searchBox.value.trim();
     if(!q){ searchResults.style.display='none'; return; }
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
-      .then(r=>r.json())
-      .then(list=>{
-        searchResults.innerHTML='';
-        list.slice(0,5).forEach(p=>{
-          const d=document.createElement('div');
-          d.className='result';
-          d.textContent=p.display_name;
-          d.onclick=()=>{
-            searchResults.style.display='none';
-            searchBox.value='';
-            const lngLat=[+p.lon,+p.lat];
-            const m = hybrid?mapHybrid:mapStreets;
-            m.flyTo({center:lngLat, zoom:14});
-            addPin(lngLat,true);
-          };
-          searchResults.appendChild(d);
-        });
-        searchResults.style.display='block';
+    .then(r=>r.json()).then(list=>{
+      searchResults.innerHTML='';
+      list.slice(0,5).forEach(p=>{
+        const d=document.createElement('div');
+        d.className='result';
+        d.textContent=p.display_name;
+        d.onclick=()=>{
+          searchResults.style.display='none';
+          searchBox.value='';
+          const lngLat=[+p.lon,+p.lat];
+          addPin(lngLat,true);
+          (hybrid?mapHybrid:mapStreets).flyTo({center:lngLat,zoom:14});
+        };
+        searchResults.appendChild(d);
       });
+      searchResults.style.display='block';
+    });
   },300);
 });
 
-document.addEventListener('click', e=>{
+document.addEventListener('click',e=>{
   if(!searchResults.contains(e.target) && e.target!==searchBox) searchResults.style.display='none';
 });
 
-/* ======= PIN MANAGEMENT ======= */
+/* ===== PINS ===== */
 function addPin(lngLat,isSearch=false){
-  const m = hybrid?mapHybrid:mapStreets;
-  let svg = defaultPinSVG;
-  let draggable=false;
-
+  const m=hybrid?mapHybrid:mapStreets;
+  let svg=defaultPinSVG, draggable=false;
   if(routingEnabled && !startMarker){ svg=startPinSVG; draggable=true; }
   else if(routingEnabled && startMarker && !endMarker){ svg=endPinSVG; draggable=true; }
 
   const el=document.createElement('div');
-  el.style.width='40px'; el.style.height='40px'; el.style.cursor='pointer';
-  el.innerHTML=svg;
+  el.style.width='40px'; el.style.height='40px'; el.style.cursor='pointer'; el.innerHTML=svg;
 
-  const marker = new maplibregl.Marker({element:el,draggable:draggable}).setLngLat(lngLat).addTo(m);
+  const marker=new maplibregl.Marker({element:el,draggable:draggable}).setLngLat(lngLat).addTo(m);
 
   if(draggable){
-    marker.on('dragend', ()=>{
+    marker.on('dragend',()=>{
       const pos=[marker.getLngLat().lng,marker.getLngLat().lat];
       if(marker===startMarker) routePoints[0]=pos;
       if(marker===endMarker) routePoints[1]=pos;
@@ -165,7 +154,7 @@ function addPin(lngLat,isSearch=false){
     });
   }
 
-  marker.getElement().addEventListener('click', ()=>{
+  marker.getElement().addEventListener('click',()=>{
     if(!routingEnabled){ marker.remove(); markers=markers.filter(x=>x!==marker); }
     else if(marker===startMarker){ startMarker.remove(); startMarker=null; routePoints.shift(); clearRouteLayers(); }
     else if(marker===endMarker){ endMarker.remove(); endMarker=null; routePoints.pop(); clearRouteLayers(); }
@@ -178,33 +167,31 @@ function addPin(lngLat,isSearch=false){
     }
     if(routingEnabled){
       if(!startMarker){ startMarker=marker; routePoints[0]=lngLat; }
-      else if(!endMarker){ endMarker=marker; routePoints[1]=lngLat; fetchRoute(); endMarker=marker; }
+      else if(!endMarker){ endMarker=marker; routePoints[1]=lngLat; endMarker=marker; fetchRoute(); }
     } else markers.push(marker);
   } else markers.push(marker);
 }
 
-/* ======= ROUTING ======= */
-const routeInfo = document.getElementById('routeInfo');
-const loadingEl = document.getElementById('loading');
+/* ===== ROUTING ===== */
+const routeInfo=document.getElementById('routeInfo');
+const loadingEl=document.getElementById('loading');
 let loadingTimer=null;
 
 function fetchRoute(){
   if(routePoints.length!==2) return;
-  loadingTimer=setTimeout(()=>{ loadingEl.style.display='block'; },700);
+  loadingTimer=setTimeout(()=>loadingEl.style.display='block',700);
   fetch(`https://api.openrouteservice.org/v2/directions/${routingMode}/geojson`,{
     method:'POST',
     headers:{'Authorization':ORS_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({coordinates: [routePoints[0],routePoints[1]]})
+    body:JSON.stringify({coordinates:[routePoints[0],routePoints[1]]})
   }).then(r=>r.json()).then(data=>{
-    clearTimeout(loadingTimer);
-    loadingEl.style.display='none';
+    clearTimeout(loadingTimer); loadingEl.style.display='none';
     if(!data.features||!data.features[0]) return;
     const feature=data.features[0];
     const routeGeoJSON=feature.geometry;
     const distKm=(feature.properties.summary.distance/1000).toFixed(2);
     const durMin=Math.round(feature.properties.summary.duration/60);
-    routeInfo.innerHTML=`Distance: ${distKm} km | Duration: ${durMin} min`;
-    routeInfo.style.display='block';
+    routeInfo.innerHTML=`Distance: ${distKm} km | Duration: ${durMin} min`; routeInfo.style.display='block';
 
     [mapStreets,mapHybrid].forEach(m=>{
       if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
@@ -212,9 +199,9 @@ function fetchRoute(){
       m.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#0074d9','line-width':5}});
     });
 
-    const bounds=routeGeoJSON.coordinates.reduce((b,c)=>b.extend(c), new maplibregl.LngLatBounds(routeGeoJSON.coordinates[0], routeGeoJSON.coordinates[0]));
+    const bounds=routeGeoJSON.coordinates.reduce((b,c)=>b.extend(c),new maplibregl.LngLatBounds(routeGeoJSON.coordinates[0],routeGeoJSON.coordinates[0]));
     const activeMap = hybrid?mapHybrid:mapStreets;
-    activeMap.fitBounds(bounds,{padding:60});
+    activeMap.fitBounds(bounds,{padding:80});
   });
 }
 
@@ -224,20 +211,16 @@ function clearRouteLayers(){
   });
 }
 
-/* ======= DOWNLOAD ======= */
-const downloadBtn = document.getElementById('downloadMap');
-downloadBtn.onclick = ()=>{
-  const m = hybrid?mapHybrid:mapStreets;
+/* ===== DOWNLOAD ===== */
+document.getElementById('downloadMap').onclick=()=>{
+  const m=hybrid?mapHybrid:mapStreets;
   document.getElementById('buttons').style.display='none';
   document.getElementById('searchWrap').style.display='none';
   setTimeout(()=>{
     const dataURL=m.getCanvas().toDataURL('image/png');
     document.getElementById('buttons').style.display='flex';
     document.getElementById('searchWrap').style.display='block';
-    const link=document.createElement('a');
-    link.href=dataURL;
-    link.download='map_export.png';
-    link.click();
+    const link=document.createElement('a'); link.href=dataURL; link.download='map_export.png'; link.click();
   },50);
 };
 </script>
