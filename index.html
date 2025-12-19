@@ -40,23 +40,34 @@ button, select, input { font:14px 'Inter', sans-serif; }
 /* VERTICAL SCREEN DETECTION AND SCALE UP */
 @media screen and (orientation: portrait) {
     #map-streets, #map-hybrid {
-        width: 66.66%; /* Adjust dimensions to prevent clipping at 1.5x scale (100 / 1.5) */
-        height: 66.66%;
-        transform: scale(1.5);
+        width: 62.5%; /* Higher Map Scale: 100 / 1.6 */
+        height: 62.5%;
+        transform: scale(1.6);
         transform-origin: top left;
     }
     #controls { 
-        width: 200px; 
+        width: 160px; /* Narrower search/controls */
         padding: 15px; 
         transform: scale(1.4);
         transform-origin: top right;
         top: 20px;
-        right: 20px;
+        right: 15px;
     }
-    #searchBox, button, select { font-size: 16px !important; padding: 12px !important; }
-    #downloadMap { top: 380px; right: 25px; transform: scale(1.6); }
-    #hybridToggle { top: 460px; right: 25px; transform: scale(1.6); }
-    #route-info { transform: scale(1.4) translateX(-35%); bottom: 50px; top: auto; }
+    #searchBox { width: 140px; font-size: 16px !important; padding: 12px !important; }
+    button, select { font-size: 16px !important; padding: 10px !important; }
+    
+    /* Repositioned Buttons */
+    #downloadMap { top: 340px; right: 20px; transform: scale(1.6); }
+    #hybridToggle { top: 410px; right: 20px; transform: scale(1.6); }
+    
+    /* Navigation Controls Scale */
+    .maplibregl-ctrl-group { transform: scale(1.5); transform-origin: top left; margin: 15px !important; }
+    
+    /* Attribution Adjustments */
+    .attribution-text { bottom: 80px; right: 10px; transform: scale(0.9); transform-origin: bottom right; max-width: 180px; }
+    .maptiler-logo { bottom: 80px; transform: scale(1.2); }
+    
+    #route-info { transform: scale(1.4) translateX(-35%); bottom: 120px; top: auto; }
 }
 </style>
 </head>
@@ -111,7 +122,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
 <div id="loading" class="loading">Loading...</div>
 
 <div class="attribution-text">
-  MapLibre | © openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors | Tiles © MapTiler
+  MapLibre | © openrouteservice.org | Map data © OpenStreetMap | Tiles © MapTiler
 </div>
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
@@ -339,7 +350,7 @@ document.getElementById('downloadMap').onclick = () => {
   const mapCanvas = (currentStyle === 'streets' ? mapStreets : mapHybrid).getCanvas();
   const tempCanvas = document.createElement('canvas'); tempCanvas.width = mapCanvas.width; tempCanvas.height = mapCanvas.height;
   const ctx = tempCanvas.getContext('2d'); ctx.drawImage(mapCanvas, 0, 0);
-  const attribution = "MapLibre | © OpenStreetMap | © MapTiler | © openrouteservice.org";
+  const attribution = "MapLibre | © openrouteservice.org | © OpenStreetMap | © MapTiler";
   ctx.font = `14px Inter, sans-serif`; const textWidth = ctx.measureText(attribution).width;
   ctx.fillStyle = "rgba(255, 255, 255, 0.7)"; ctx.fillRect(tempCanvas.width - textWidth - 20, tempCanvas.height - 34, textWidth + 20, 34);
   ctx.fillStyle = "#333"; ctx.fillText(attribution, tempCanvas.width - textWidth - 10, tempCanvas.height - 10);
