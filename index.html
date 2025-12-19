@@ -321,49 +321,24 @@ function addPin(lngLat, isSearch = false) {
 }
 
 function addWaypoint(lngLat) {
-    const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-    const el = document.createElement('div');
-    if (isMobile) {
-        el.style.width = '30px'; el.style.height = '30px';
-        el.style.background = 'rgba(139, 138, 235, 0.9)'; el.style.border = '3px solid white';
-    } else {
-        el.style.width = '18px'; el.style.height = '18px';
-        el.style.background = 'rgba(139, 138, 235, 0.8)'; el.style.border = '2px solid white';
-    }
-    el.style.borderRadius = '50%';
-    
-    const wp = new maplibregl.Marker({ element: el, draggable: true }).setLngLat(lngLat).addTo(activeMap);
-    
-    // Insert into routePoints before the end marker (last index)
-    const insertIdx = routePoints.length - 1;
-    routePoints.splice(insertIdx, 0, lngLat);
-    waypointMarkers.push(wp);
-
-    wp.on('dragend', () => {
-        const idx = waypointMarkers.indexOf(wp);
-        // Waypoints start at index 1 in routePoints (after Start)
-        routePoints[idx + 1] = [wp.getLngLat().lng, wp.getLngLat().lat];
-        fetchRoute();
-    });
-
-    // FIXED REMOVAL LOGIC
-    wp.getElement().addEventListener('click', (e) => { 
-        e.stopPropagation(); 
-        
-        const idx = waypointMarkers.indexOf(wp);
-        if (idx > -1) {
-            // Remove from the markers array
-            waypointMarkers.splice(idx, 1);
-            // Remove from the coordinates array (offset by 1 because of Start point)
-            routePoints.splice(idx + 1, 1);
-            // Remove from map
-            wp.remove();
-            // Recalculate the line
-            fetchRoute();
-        }
-    });
-
-    fetchRoute();
+  if (!routingEnabled || !startMarker || !endMarker) return;
+  const el = document.createElement('div');
+  if(isMobile) {
+      el.innerHTML = defaultPinSVG;
+  } else {
+      el.style.width = '18px'; el.style.height = '18px'; el.style.borderRadius = '50%';
+      el.style.background = 'rgba(139, 138, 235, 0.6)'; el.style.border = '2px solid rgba(255, 255, 255, 0.8)';
+  }
+  
+  const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
+  const wp = new maplibregl.Marker({ element: el, draggable: true }).setLngLat(lngLat).addTo(map);
+  routePoints.splice(routePoints.length - 1, 0, [lngLat[0], lngLat[1]]); waypointMarkers.push(wp);
+  wp.on('dragend', () => {
+    const idx = waypointMarkers.indexOf(wp);
+    if (idx !== -1) { routePoints[idx + 1] = [wp.getLngLat().lng, wp.getLngLat().lat]; fetchRoute(); }
+  });
+  wp.getElement().addEventListener('click', (e) => { e.stopPropagation(); removeWaypoint(wp); });
+  fetchRoute();
 }
 
 document.getElementById('searchBox').addEventListener('input', (e) => {
@@ -420,5 +395,6 @@ document.getElementById('hybridToggle').onclick = () => showHybrid(currentStyle 
 </script>
 </body>
 </html>
+
 
 
