@@ -21,12 +21,14 @@ button, select, input { font:14px 'Inter', sans-serif; }
 
 #searchBox { width:200px; padding:4px; border-radius:4px; border:1px solid #ccc; z-index:26; position:relative; }
 #searchResults { 
-  position:absolute; top:38px; right:10px; background:white; 
+  position:absolute; top:42px; left:0; background:white; 
   border:1px solid #ccc; max-height:180px; overflow-y:auto; 
-  width:200px; z-index:100; border-radius:4px; display:none; 
+  width:100%; z-index:100; border-radius:4px; display:none; 
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.searchItem { padding:4px 6px; cursor:pointer; }
+.searchItem { padding:8px; cursor:pointer; font-size: 13px; line-height: 1.2; border-bottom: 1px solid #eee; }
+.searchItem:last-child { border-bottom: none; }
 .searchItem:hover { background:#eee; }
 
 .route-info { position:absolute; top:50px; left:50%; transform:translateX(-50%); background:white; padding:8px 14px; border:1px solid #333; font:14px 'Inter', sans-serif; z-index:25; border-radius:6px; opacity:0.9; pointer-events:none; }
@@ -40,34 +42,46 @@ button, select, input { font:14px 'Inter', sans-serif; }
 /* VERTICAL SCREEN DETECTION AND SCALE UP */
 @media screen and (orientation: portrait) {
     #map-streets, #map-hybrid {
-        width: 62.5%; /* Higher Map Scale: 100 / 1.6 */
+        width: 62.5%; /* Map Scale: 1.6x */
         height: 62.5%;
         transform: scale(1.6);
         transform-origin: top left;
     }
     #controls { 
-        width: 160px; /* Narrower search/controls */
-        padding: 15px; 
+        width: 160px; 
+        padding: 12px; 
         transform: scale(1.4);
         transform-origin: top right;
-        top: 20px;
+        top: 15px;
         right: 15px;
     }
-    #searchBox { width: 140px; font-size: 16px !important; padding: 12px !important; }
-    button, select { font-size: 16px !important; padding: 10px !important; }
+    #searchBox { width: 135px; font-size: 16px !important; padding: 10px !important; }
+    #searchResults { top: 48px; width: 100%; } /* Anchored correctly below scaled searchbox */
+    .searchItem { padding: 12px 10px; font-size: 14px; }
     
-    /* Repositioned Buttons */
-    #downloadMap { top: 340px; right: 20px; transform: scale(1.6); }
-    #hybridToggle { top: 410px; right: 20px; transform: scale(1.6); }
+    button, select { font-size: 15px !important; padding: 8px !important; }
+    
+    /* Repositioned Buttons - Lowered for easier reach */
+    #downloadMap { top: 380px; right: 20px; transform: scale(1.6); }
+    #hybridToggle { top: 450px; right: 20px; transform: scale(1.6); }
     
     /* Navigation Controls Scale */
-    .maplibregl-ctrl-group { transform: scale(1.5); transform-origin: top left; margin: 15px !important; }
+    .maplibregl-ctrl-group { transform: scale(1.6); transform-origin: top left; margin: 20px !important; }
     
-    /* Attribution Adjustments */
-    .attribution-text { bottom: 80px; right: 10px; transform: scale(0.9); transform-origin: bottom right; max-width: 180px; }
-    .maptiler-logo { bottom: 80px; transform: scale(1.2); }
+    /* Attribution: Bottom-Center and Scaled Up */
+    .attribution-text { 
+        bottom: 15px; 
+        left: 50%; 
+        right: auto;
+        transform: translateX(-50%) scale(1.1); 
+        width: 90%;
+        text-align: center;
+        padding: 8px;
+        font-size: 11px;
+    }
+    .maptiler-logo { bottom: 60px; left: 15px; transform: scale(1.3); }
     
-    #route-info { transform: scale(1.4) translateX(-35%); bottom: 120px; top: auto; }
+    #route-info { transform: scale(1.3) translateX(-50%); bottom: 100px; top: auto; left: 50%; width: 200px; text-align: center;}
 }
 </style>
 </head>
@@ -122,7 +136,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
 <div id="loading" class="loading">Loading...</div>
 
 <div class="attribution-text">
-  MapLibre | © openrouteservice.org | Map data © OpenStreetMap | Tiles © MapTiler
+  © openrouteservice.org | © OpenStreetMap | © MapTiler
 </div>
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank" rel="noopener">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
@@ -209,13 +223,13 @@ document.getElementById('mode').onchange = function(){
 
 document.getElementById('resetRoute').onclick = ()=>{ 
   clearRoute(); 
-  if(routingEnabled) searchBox.placeholder = "Select starting location"; 
+  if(routingEnabled) searchBox.placeholder = "Select start"; 
 };
 
 function updateSearchPlaceholder(){
   if(!routingEnabled) searchBox.placeholder = "Search";
-  else if(routingEnabled && !startMarker) searchBox.placeholder = "Select starting location";
-  else if(routingEnabled && startMarker && !endMarker) searchBox.placeholder = "Select ending location";
+  else if(routingEnabled && !startMarker) searchBox.placeholder = "Select start";
+  else if(routingEnabled && startMarker && !endMarker) searchBox.placeholder = "Select end";
   else searchBox.placeholder = "Search";
 }
 
@@ -224,9 +238,9 @@ function addPin(map, lngLat, isSearch = false) {
   let draggable = routingEnabled;
   let pinTarget = null;
   if (routingEnabled) {
-    if (!startMarker || (isSearch && searchBox.placeholder.toLowerCase().includes('starting'))) {
+    if (!startMarker || (isSearch && searchBox.placeholder.toLowerCase().includes('start'))) {
       pinTarget = 'start'; svgContent = startPinSVG;
-    } else if (!endMarker || (isSearch && searchBox.placeholder.toLowerCase().includes('ending'))) {
+    } else if (!endMarker || (isSearch && searchBox.placeholder.toLowerCase().includes('end'))) {
       pinTarget = 'end'; svgContent = endPinSVG;
     } else if (!isSearch) {
       pinTarget = 'end'; if(endMarker) endMarker.remove(); svgContent = endPinSVG;
@@ -246,7 +260,7 @@ function addPin(map, lngLat, isSearch = false) {
   if (pinTarget === 'start') {
     if (startMarker) startMarker.remove(); startMarker = m;
     if(routePoints.length === 0) routePoints = [[lngLat[0], lngLat[1]]]; else routePoints[0] = [lngLat[0], lngLat[1]];
-    if (isSearch) searchBox.placeholder = "Select ending location";
+    if (isSearch) searchBox.placeholder = "Select end";
     if(endMarker) fetchRoute();
   } else if (pinTarget === 'end') {
     if (endMarker) endMarker.remove(); endMarker = m;
@@ -279,7 +293,7 @@ function fetchRoute(){
   .then(data => {
     if(!data.features || !data.features[0]) return;
     const feature = data.features[0]; const routeGeoJSON = feature.geometry;
-    routeInfo.innerHTML = `Distance: ${(feature.properties.summary.distance / 1000).toFixed(2)} km | Duration: ${Math.round(feature.properties.summary.duration / 60)} min`;
+    routeInfo.innerHTML = `Dist: ${(feature.properties.summary.distance / 1000).toFixed(2)} km | Dur: ${Math.round(feature.properties.summary.duration / 60)} min`;
     routeInfo.style.display = 'block'; hintText.style.display = 'block';
     [mapStreets, mapHybrid].forEach(m => {
       if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
@@ -350,7 +364,7 @@ document.getElementById('downloadMap').onclick = () => {
   const mapCanvas = (currentStyle === 'streets' ? mapStreets : mapHybrid).getCanvas();
   const tempCanvas = document.createElement('canvas'); tempCanvas.width = mapCanvas.width; tempCanvas.height = mapCanvas.height;
   const ctx = tempCanvas.getContext('2d'); ctx.drawImage(mapCanvas, 0, 0);
-  const attribution = "MapLibre | © openrouteservice.org | © OpenStreetMap | © MapTiler";
+  const attribution = "© openrouteservice.org | © OpenStreetMap | © MapTiler";
   ctx.font = `14px Inter, sans-serif`; const textWidth = ctx.measureText(attribution).width;
   ctx.fillStyle = "rgba(255, 255, 255, 0.7)"; ctx.fillRect(tempCanvas.width - textWidth - 20, tempCanvas.height - 34, textWidth + 20, 34);
   ctx.fillStyle = "#333"; ctx.fillText(attribution, tempCanvas.width - textWidth - 10, tempCanvas.height - 10);
