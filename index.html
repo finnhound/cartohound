@@ -78,7 +78,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
 "></div>
 
 <div id="hint-text" class="hint-text">
-  <strong>Shift+Click</strong> on route to add waypoints<br>
+  <strong>Click on route</strong> to add waypoints<br>
   <strong>Double-click</strong> waypoints to remove
 </div>
 
@@ -252,6 +252,9 @@ function addPin(map, lngLat, isSearch = false) {
     }
     if (isSearch) {
       searchBox.placeholder = "Search";
+    }
+    // FIXED: Fetch route immediately when end point is set
+    if(startMarker && endMarker) {
       fetchRoute();
     }
   }
@@ -424,16 +427,18 @@ function removeWaypoint(wp) {
   fetchRoute();
 }
 
-// Map clicks - handle both regular clicks and shift+clicks
+// Map clicks - handle clicks on route line for waypoints
 function onMapClick(e) {
   const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
   
-  // Shift+Click to add waypoint
-  if (e.originalEvent.shiftKey) {
-    if (routingEnabled && startMarker && endMarker) {
+  // Check if clicking on route line
+  if (routingEnabled && startMarker && endMarker && map.getLayer('route')) {
+    const features = map.queryRenderedFeatures(e.point, { layers: ['route'] });
+    if (features.length > 0) {
+      // Clicked on route line - add waypoint
       addWaypoint([e.lngLat.lng, e.lngLat.lat]);
+      return;
     }
-    return;
   }
   
   // Regular click for start/end points
