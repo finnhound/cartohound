@@ -261,6 +261,11 @@ waypointMarkers = [];
   routePoints=[];
   routeInfo.style.display='none';
   [mapStreets,mapHybrid].forEach(m=>{ if(m.getLayer('route')) m.removeLayer('route'); if(m.getSource('route')) m.removeSource('route'); });
+  waypointMarkers.forEach(wp => {
+  wp.streets.remove();
+  wp.hybrid.remove();
+});
+waypointMarkers = [];
 }
 
 // Fetch route
@@ -294,7 +299,7 @@ function fetchRoute(){
   });
 }
 
-  function addWaypoint(lngLat) {
+function addWaypoint(lngLat) {
   if (!routingEnabled || !startMarker || !endMarker) return;
 
   const el = document.createElement('div');
@@ -305,12 +310,38 @@ function fetchRoute(){
   el.style.border = '3px solid white';
   el.style.cursor = 'move';
 
-  const wp = new maplibregl.Marker({
-    element: el,
+  const wpStreets = new maplibregl.Marker({
+    element: el.cloneNode(true),
     draggable: true
-  })
-    .setLngLat(lngLat)
-    .addTo(currentStyle === 'streets' ? mapStreets : mapHybrid);
+  }).setLngLat(lngLat).addTo(mapStreets);
+
+  const wpHybrid = new maplibregl.Marker({
+    element: el.cloneNode(true),
+    draggable: true
+  }).setLngLat(lngLat).addTo(mapHybrid);
+
+  routePoints.splice(routePoints.length - 1, 0, lngLat);
+
+  const wp = { streets: wpStreets, hybrid: wpHybrid };
+  waypointMarkers.push(wp);
+
+  function syncWaypoint(marker) {
+    const pos = [marker.getLngLat().lng, marker.getLngLat().lat];
+    const idx = waypointMarkers.indexOf(wp);
+    if (idx !== -1) {
+      routePoints[idx + 1] = pos;
+      wp.streets.setLngLat(pos);
+      wp.hybrid.setLngLat(pos);
+      fetchRoute();
+    }
+  }
+
+  wpStreets.on('dragend', () => syncWaypoint(wpStreets));
+  wpHybrid.on('dragend', () => syncWaypoint(wpHybrid));
+
+  fetchRoute();
+}
+
 
   // Insert waypoint before end point
   routePoints.splice(routePoints.length - 1, 0, lngLat);
@@ -349,13 +380,26 @@ function fetchRoute(){
   
 
 // Map clicks
-function onMapClick(e){
-  waypointMarkers.forEach(wp => wp.remove());
-waypointMarkers = [];
-  if(!routingEnabled) return;
-  const map = currentStyle==='streets'?mapStreets:mapHybrid;
-  addPin(map,[e.lngLat.lng,e.lngLat.lat], true);
+function onMapClick(e) {
+  const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
+
+  // SHIFT + click → waypoint
+  if (
+    routingEnabled &&
+    startMarker &&
+    endMarker &&
+    e.originalEvent.shiftKey
+  ) {
+    addWaypoint([e.lngLat.lng, e.lngLat.lat]);
+    return;
+  }
+
+  // Normal routing behavior
+  if (!routingEnabled) return;
+
+  addPin(map, [e.lngLat.lng, e.lngLat.lat], true);
 }
+
 [mapStreets,mapHybrid].forEach(m=>m.on('click',onMapClick));
 
 // Nominatim search
@@ -418,6 +462,7 @@ document.getElementById('downloadMap').onclick = ()=>{
 </script>
 </body>
 </html>
+
 
 
 
