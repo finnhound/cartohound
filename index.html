@@ -6,8 +6,8 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
 <style>
-html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
-.map { width:100%; height:100%; position:absolute; top:0; left:0; }
+html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: hidden; background: #000; }
+.map { width:100%; height:100%; position:absolute; top:0; left:0; transition: transform 0.3s ease; }
 
 #controls { position:absolute; top:10px; right:10px; z-index:25; background:white; padding:10px; border:1px solid #ccc; display:flex; flex-direction:column; gap:5px; border-radius:6px; }
 #hybridToggle { position:absolute; top:180px; right:10px; z-index:20; background:white; padding:8px; border:1px solid #ccc; cursor:pointer; border-radius:6px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; transition: background 0.2s; }
@@ -29,7 +29,7 @@ button, select, input { font:14px 'Inter', sans-serif; }
   max-height:180px; 
   overflow-y:auto; 
   width:200px; 
-  z-index:100; /* Increased from 30 to 100 */
+  z-index:100; 
   border-radius:4px; 
   display:none; 
 }
@@ -44,6 +44,26 @@ button, select, input { font:14px 'Inter', sans-serif; }
 .maptiler-logo { position:absolute; left:10px; bottom:10px; z-index:25; }
 
 .hint-text { position:absolute; top:240px; right:10px; z-index:20; background:rgba(255,255,255,0.95); padding:8px 12px; border:1px solid #ccc; border-radius:6px; font:12px 'Inter', sans-serif; max-width:200px; display:none; }
+
+/* MOBILE SCALING */
+@media (max-width: 600px) {
+    #map-streets, #map-hybrid {
+        width: 83.33%;
+        height: 83.33%;
+        transform: scale(1.2);
+        transform-origin: top left;
+    }
+    #controls { 
+        width: 220px; 
+        padding: 15px; 
+        transform: scale(1.1);
+        transform-origin: top right;
+    }
+    #searchBox, button, select { font-size: 16px !important; padding: 10px !important; }
+    #downloadMap { top: 240px; right: 20px; transform: scale(1.3); }
+    #hybridToggle { top: 300px; right: 20px; transform: scale(1.3); }
+    #route-info { transform: scale(1.1) translateX(-45%); bottom: 20px; top: auto; }
+}
 </style>
 </head>
 <body>
@@ -142,7 +162,6 @@ function showHybrid(isHybrid) {
     document.getElementById('map-streets').style.display='none'; 
     document.getElementById('map-hybrid').style.display='block'; 
     mapHybrid.resize(); 
-    // Re-add all markers to hybrid map
     if(startMarker) startMarker.addTo(mapHybrid);
     if(endMarker) endMarker.addTo(mapHybrid);
     waypointMarkers.forEach(wp => wp.addTo(mapHybrid));
@@ -150,7 +169,6 @@ function showHybrid(isHybrid) {
     document.getElementById('map-streets').style.display='block'; 
     document.getElementById('map-hybrid').style.display='none'; 
     mapStreets.resize(); 
-    // Re-add all markers to streets map
     if(startMarker) startMarker.addTo(mapStreets);
     if(endMarker) endMarker.addTo(mapStreets);
     waypointMarkers.forEach(wp => wp.addTo(mapStreets));
@@ -196,7 +214,6 @@ document.getElementById('resetRoute').onclick = ()=>{
   if(routingEnabled) searchBox.placeholder = "Select starting location"; 
 };
 
-// Search placeholder logic
 function updateSearchPlaceholder(){
   if(!routingEnabled) searchBox.placeholder = "Search";
   else if(routingEnabled && !startMarker) searchBox.placeholder = "Select starting location";
@@ -204,7 +221,6 @@ function updateSearchPlaceholder(){
   else searchBox.placeholder = "Search";
 }
 
-// Add pin function
 function addPin(map, lngLat, isSearch = false) {
   let svgContent = defaultPinSVG;
   let draggable = routingEnabled;
@@ -218,7 +234,6 @@ function addPin(map, lngLat, isSearch = false) {
       pinTarget = 'end';
       svgContent = endPinSVG;
     } else if (!isSearch) {
-      // When both pins exist, overwrite end point
       pinTarget = 'end';
       if(endMarker) endMarker.remove();
       svgContent = endPinSVG;
@@ -245,7 +260,6 @@ function addPin(map, lngLat, isSearch = false) {
     });
   }
 
-  // Assign to start/end and update routePoints
   if (pinTarget === 'start') {
     if (startMarker) startMarker.remove();
     startMarker = m;
@@ -255,10 +269,7 @@ function addPin(map, lngLat, isSearch = false) {
       routePoints[0] = [lngLat[0], lngLat[1]];
     }
     if (isSearch) searchBox.placeholder = "Select ending location";
-    // Fetch route if end marker exists
-    if(endMarker) {
-      fetchRoute();
-    }
+    if(endMarker) fetchRoute();
   } else if (pinTarget === 'end') {
     if (endMarker) endMarker.remove();
     endMarker = m;
@@ -267,16 +278,10 @@ function addPin(map, lngLat, isSearch = false) {
     } else {
       routePoints[routePoints.length - 1] = [lngLat[0], lngLat[1]];
     }
-    if (isSearch) {
-      searchBox.placeholder = "Search";
-    }
-    // Fetch route immediately when end point is set
-    if(startMarker && endMarker) {
-      fetchRoute();
-    }
+    if (isSearch) searchBox.placeholder = "Search";
+    if(startMarker && endMarker) fetchRoute();
   }
 
-  // Remove marker on click
   m.getElement().addEventListener('click', (e) => {
     e.stopPropagation();
     m.remove();
@@ -293,7 +298,6 @@ function addPin(map, lngLat, isSearch = false) {
   updateRouteButton();
 }
 
-// Clear route
 function clearRoute(){
   waypointMarkers.forEach(wp => wp.remove());
   waypointMarkers = [];
@@ -309,164 +313,98 @@ function clearRoute(){
   updateSearchPlaceholder();
 }
 
-// Fetch route with waypoints support
 let loadingTimer = null;
 function fetchRoute(){
   if(routePoints.length < 2) return;
-  
   clearTimeout(loadingTimer);
   loadingTimer = setTimeout(()=>{ loadingEl.style.display='block'; }, 300);
-  
   const url = `https://api.openrouteservice.org/v2/directions/${routingMode}/geojson`;
   const body = { coordinates: routePoints };
-  
   fetch(url, {
     method:'POST', 
-    headers: { 
-      "Authorization": ORS_KEY, 
-      "Content-Type": "application/json"
-    }, 
+    headers: { "Authorization": ORS_KEY, "Content-Type": "application/json" }, 
     body: JSON.stringify(body)
   })
   .then(res => res.json())
   .then(data => {
     clearTimeout(loadingTimer); 
     loadingEl.style.display = 'none';
-    
-    if(!data.features || !data.features[0]) {
-      console.error('No route found');
-      return;
-    }
-    
+    if(!data.features || !data.features[0]) return;
     const feature = data.features[0];
     const routeGeoJSON = feature.geometry;
     const distanceKm = (feature.properties.summary.distance / 1000).toFixed(2);
     const durationMin = Math.round(feature.properties.summary.duration / 60);
-    
     routeInfo.innerHTML = `Distance: ${distanceKm} km | Duration: ${durationMin} min`;
     routeInfo.style.display = 'block';
     hintText.style.display = 'block';
-    
     [mapStreets, mapHybrid].forEach(m => {
-      if(m.getSource('route')){ 
-        m.removeLayer('route'); 
-        m.removeSource('route'); 
-      }
-      m.addSource('route', {
-        type: 'geojson', 
-        data: {
-          type: 'Feature', 
-          geometry: routeGeoJSON
-        }
-      });
+      if(m.getSource('route')){ m.removeLayer('route'); m.removeSource('route'); }
+      m.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: routeGeoJSON } });
       m.addLayer({
-        id: 'route', 
-        type: 'line', 
-        source: 'route', 
-        layout: {
-          'line-cap': 'round',
-          'line-join': 'round'
-        }, 
-        paint: {
-          'line-color': '#0074d9',
-          'line-width': 5
-        }
+        id: 'route', type: 'line', source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' }, 
+        paint: { 'line-color': '#0074d9', 'line-width': 5 }
       });
     });
-    
-    // Fit route bounds
     const coords = routeGeoJSON.coordinates;
     const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coords[0], coords[0]));
     const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
     activeMap.fitBounds(bounds, {padding: 100});
-  })
-  .catch(err => {
-    clearTimeout(loadingTimer); 
-    loadingEl.style.display = 'none';
-    console.error('Route fetch error:', err);
   });
 }
 
-// Add waypoint function
 function addWaypoint(lngLat) {
   if (!routingEnabled || !startMarker || !endMarker) return;
-
-const el = document.createElement('div');
-el.style.width = '18px';
-el.style.height = '18px';
-el.style.borderRadius = '50%';
-// Semi-transparent purple (0.6 opacity)
-el.style.background = 'rgba(139, 138, 235, 0.6)'; 
-el.style.border = '2px solid rgba(255, 255, 255, 0.8)';
-el.style.cursor = 'pointer';
-el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-  
+  const el = document.createElement('div');
+  el.style.width = '18px';
+  el.style.height = '18px';
+  el.style.borderRadius = '50%';
+  el.style.background = 'rgba(139, 138, 235, 0.6)'; 
+  el.style.border = '2px solid rgba(255, 255, 255, 0.8)';
+  el.style.cursor = 'pointer';
+  el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
   const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
-  const wp = new maplibregl.Marker({
-    element: el,
-    draggable: true
-  })
-    .setLngLat(lngLat)
-    .addTo(map);
-
-  // Insert waypoint before end point
+  const wp = new maplibregl.Marker({ element: el, draggable: true }).setLngLat(lngLat).addTo(map);
   routePoints.splice(routePoints.length - 1, 0, [lngLat[0], lngLat[1]]);
   waypointMarkers.push(wp);
-
   wp.on('dragend', () => {
     const idx = waypointMarkers.indexOf(wp);
     if (idx !== -1) {
-      routePoints[idx + 1] = [
-        wp.getLngLat().lng,
-        wp.getLngLat().lat
-      ];
+      routePoints[idx + 1] = [wp.getLngLat().lng, wp.getLngLat().lat];
       fetchRoute();
     }
   });
-
-  // Double-click to remove
-wp.getElement().addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevents map click events from firing
+  wp.getElement().addEventListener('click', (e) => {
+    e.stopPropagation();
     removeWaypoint(wp);
   });
-
   fetchRoute();
 }
-  
-// Remove waypoint function
+
 function removeWaypoint(wp) {
   const idx = waypointMarkers.indexOf(wp);
   if (idx === -1) return;
-
   wp.remove();
   waypointMarkers.splice(idx, 1);
   routePoints.splice(idx + 1, 1);
-
   fetchRoute();
 }
 
-// Map clicks - handle clicks on route line for waypoints
 function onMapClick(e) {
   const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
-  
-  // Check if clicking on route line
   if (routingEnabled && startMarker && endMarker && map.getLayer('route')) {
     const features = map.queryRenderedFeatures(e.point, { layers: ['route'] });
     if (features.length > 0) {
-      // Clicked on route line - add waypoint
       addWaypoint([e.lngLat.lng, e.lngLat.lat]);
       return;
     }
   }
-  
-  // Regular click for start/end points
   if (!routingEnabled) return;
   addPin(map, [e.lngLat.lng, e.lngLat.lat], false);
 }
 
 [mapStreets, mapHybrid].forEach(m => m.on('click', onMapClick));
 
-// Nominatim search
 let debounceTimer;
 searchBox.addEventListener('input', () => {
   updateSearchPlaceholder();
@@ -478,7 +416,7 @@ searchBox.addEventListener('input', () => {
       .then(res => res.json())
       .then(results => {
         searchResults.innerHTML = '';
-        if(!results || results.length === 0) { searchResults.style.display = 'none'; return; }
+        if(!results || results.length === 0) return;
         results.slice(0, 5).forEach(r => {
           const div = document.createElement('div');
           div.className = 'searchItem';
@@ -488,7 +426,6 @@ searchBox.addEventListener('input', () => {
             const lngLat = [parseFloat(r.lon), parseFloat(r.lat)];
             const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
             map.flyTo({ center: lngLat, zoom: 14 });
-
             addPin(map, lngLat, true);
             searchBox.value = '';
             updateSearchPlaceholder();
@@ -501,51 +438,26 @@ searchBox.addEventListener('input', () => {
 });
 
 document.addEventListener('click', e => { 
-  if(!searchResults.contains(e.target) && e.target !== searchBox) 
-    searchResults.style.display = 'none'; 
+  if(!searchResults.contains(e.target) && e.target !== searchBox) searchResults.style.display = 'none'; 
 });
 
-// Download map
 document.getElementById('downloadMap').onclick = () => {
   const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
   const mapCanvas = map.getCanvas();
-  
-  // Create a temporary canvas to draw the combined image
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = mapCanvas.width;
   tempCanvas.height = mapCanvas.height;
   const ctx = tempCanvas.getContext('2d');
-
-  // 1. Draw the map onto the temp canvas
   ctx.drawImage(mapCanvas, 0, 0);
-
-  // 2. Define attribution text
   const attribution = "MapLibre | © OpenStreetMap | © MapTiler | © openrouteservice.org";
-  
-  // 3. Style the text
   const fontSize = 14;
   ctx.font = `${fontSize}px Inter, sans-serif`;
-  
-  // 4. Draw a small semi-transparent background for the text
   const textWidth = ctx.measureText(attribution).width;
   const padding = 10;
   ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-  ctx.fillRect(
-    tempCanvas.width - textWidth - (padding * 2), 
-    tempCanvas.height - fontSize - (padding * 2), 
-    textWidth + (padding * 2), 
-    fontSize + (padding * 2)
-  );
-
-  // 5. Draw the text
+  ctx.fillRect(tempCanvas.width - textWidth - (padding * 2), tempCanvas.height - fontSize - (padding * 2), textWidth + (padding * 2), fontSize + (padding * 2));
   ctx.fillStyle = "#333";
-  ctx.fillText(
-    attribution, 
-    tempCanvas.width - textWidth - padding, 
-    tempCanvas.height - padding
-  );
-
-  // 6. Trigger download
+  ctx.fillText(attribution, tempCanvas.width - textWidth - padding, tempCanvas.height - padding);
   tempCanvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -558,4 +470,3 @@ document.getElementById('downloadMap').onclick = () => {
 </script>
 </body>
 </html>
-
