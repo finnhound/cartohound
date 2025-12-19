@@ -391,15 +391,16 @@ function fetchRoute(){
 function addWaypoint(lngLat) {
   if (!routingEnabled || !startMarker || !endMarker) return;
 
-  const el = document.createElement('div');
-  el.style.width = '18px';
-  el.style.height = '18px';
-  el.style.borderRadius = '50%';
-  el.style.background = '#8b8aeb';
-  el.style.border = '2px solid white';
-  el.style.cursor = 'move';
-  el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
-
+const el = document.createElement('div');
+el.style.width = '18px';
+el.style.height = '18px';
+el.style.borderRadius = '50%';
+// Semi-transparent purple (0.6 opacity)
+el.style.background = 'rgba(139, 138, 235, 0.6)'; 
+el.style.border = '2px solid rgba(255, 255, 255, 0.8)';
+el.style.cursor = 'pointer';
+el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+  
   const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
   const wp = new maplibregl.Marker({
     element: el,
@@ -507,15 +508,52 @@ document.addEventListener('click', e => {
 // Download map
 document.getElementById('downloadMap').onclick = () => {
   const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
-  const canvas = map.getCanvas();
-  canvas.toBlob(blob => {
+  const mapCanvas = map.getCanvas();
+  
+  // Create a temporary canvas to draw the combined image
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = mapCanvas.width;
+  tempCanvas.height = mapCanvas.height;
+  const ctx = tempCanvas.getContext('2d');
+
+  // 1. Draw the map onto the temp canvas
+  ctx.drawImage(mapCanvas, 0, 0);
+
+  // 2. Define attribution text
+  const attribution = "MapLibre | © OpenStreetMap | © MapTiler | © openrouteservice.org";
+  
+  // 3. Style the text
+  const fontSize = 14;
+  ctx.font = `${fontSize}px Inter, sans-serif`;
+  
+  // 4. Draw a small semi-transparent background for the text
+  const textWidth = ctx.measureText(attribution).width;
+  const padding = 10;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  ctx.fillRect(
+    tempCanvas.width - textWidth - (padding * 2), 
+    tempCanvas.height - fontSize - (padding * 2), 
+    textWidth + (padding * 2), 
+    fontSize + (padding * 2)
+  );
+
+  // 5. Draw the text
+  ctx.fillStyle = "#333";
+  ctx.fillText(
+    attribution, 
+    tempCanvas.width - textWidth - padding, 
+    tempCanvas.height - padding
+  );
+
+  // 6. Trigger download
+  tempCanvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'map.png';
+    a.download = `map-export-${Date.now()}.png`;
     a.click();
     URL.revokeObjectURL(url);
-  });
+  }, 'image/png');
 };
 </script>
 </body>
