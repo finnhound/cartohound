@@ -9,6 +9,12 @@
 html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: hidden; background: #000; }
 .map { width:100%; height:100%; position:absolute; top:0; left:0; transition: transform 0.3s ease; }
 
+/* Pan Blocker for GPS Mode */
+#pan-blocker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; display: none; pointer-events: auto; }
+
+/* Loading Indicator */
+#loading-bar { position: fixed; top: 0; left: 0; width: 0%; height: 4px; background: #007aff; z-index: 200; transition: width 0.3s, opacity 0.3s; }
+
 #controls { position:absolute; top:10px; right:10px; z-index:25; background:white; padding:10px; border:1px solid #ccc; display:flex; flex-direction:column; gap:5px; border-radius:6px; }
 
 /* Side Dock Buttons */
@@ -51,15 +57,12 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: h
     #gpsToggle { top: 560px; right: 20px; transform: scale(1.7); }
     #hybridToggle { top: 640px; right: 20px; transform: scale(1.7); }
     
-    /* RESTORE ICONS FOR +/- BUTTONS */
-    .maplibregl-ctrl-group { transform: scale(1.7); transform-origin: top left; margin: 25px !important; background: white !important; }
-    .maplibregl-ctrl-icon { display: block !important; width: 100% !important; height: 100% !important; background-size: 60% !important; }
+    /* REMOVE MAPLIBRE ZOOM CONTROLS ON MOBILE */
+    .maplibregl-ctrl-group { display: none !important; }
     
-    /* LARGER ATTRIBUTION */
     .attribution-text { bottom: 20px; left: 50%; right: auto; transform: translateX(-50%) scale(1.3); width: 75%; text-align: center; padding: 10px; font-size: 11px; }
     .maptiler-logo { bottom: 100px; left: 25px; transform: scale(1.6); }
 
-    /* MOVE ROUTE INFO TOP-LEFT & SCALE UP */
     #route-info { 
         top: 20px; 
         left: 20px; 
@@ -74,6 +77,9 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: h
 </style>
 </head>
 <body>
+
+<div id="loading-bar"></div>
+<div id="pan-blocker"></div>
 
 <div id="map-streets" class="map"></div>
 <div id="map-hybrid" class="map" style="display:none;"></div>
@@ -127,6 +133,7 @@ let currentStyle = localStorage.getItem('mapStyle') || 'streets';
 let routingEnabled = JSON.parse(localStorage.getItem('mapRouteEnabled') || 'false');
 let watchId = null;
 let currentCoords = null;
+let searchTimeout = null;
 
 let routePoints = [];
 let startMarker = null, endMarker = null, waypointMarkers = [];
@@ -134,9 +141,23 @@ let userMarkerStreets = null, userMarkerHybrid = null;
 
 const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
 const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
-[mapStreets,mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
+
+if (!isMobile) {
+    [mapStreets,mapHybrid].forEach(m=>{ m.addControl(new maplibregl.NavigationControl({showCompass:true, showZoom:true}),'top-left'); });
+}
 
 const arrowSVG = `<svg width="${pinSize}" height="${pinSize}" viewBox="0 0 40 40"><circle cx="20" cy="20" r="12" fill="#007aff" stroke="white" stroke-width="3"/><path d="M20 5L27 18H13L20 5Z" fill="#007aff" stroke="white" stroke-width="2" stroke-linejoin="round"/></svg>`;
+
+function setLoading(active) {
+    const bar = document.getElementById('loading-bar');
+    if (active) {
+        bar.style.opacity = '1';
+        bar.style.width = '70%';
+    } else {
+        bar.style.width = '100%';
+        setTimeout(() => { bar.style.opacity = '0'; bar.style.width = '0%'; }, 300);
+    }
+}
 
 function showHybrid(isHybrid) {
     document.getElementById('map-streets').style.display = isHybrid ? 'none' : 'block';
@@ -164,39 +185,46 @@ mapHybrid.on('move', () => syncView(mapHybrid, mapStreets));
 
 // --- GPS TRACKING & ORBITAL LOCK ---
 async function handleOrientation(event) {
-    let heading = event.webkitCompassHeading || (360 - event.alpha);
-    if (!heading) return;
+    let heading = 0;
+    if (event.webkitCompassHeading) {
+        heading = event.webkitCompassHeading; // iOS
+    } else if (event.alpha) {
+        heading = 360 - event.alpha; // Android normalization
+    } else { return; }
+
     if (userMarkerStreets) userMarkerStreets.setRotation(heading);
     if (userMarkerHybrid) userMarkerHybrid.setRotation(heading);
     
     if (watchId !== null && currentCoords) {
         const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-        // JUMP TO CENTER + SET BEARING = ORBITAL LOCK
-        activeMap.jumpTo({
-            center: currentCoords,
-            bearing: heading
-        });
+        activeMap.jumpTo({ center: currentCoords, bearing: heading });
     }
 }
 
 document.getElementById('gpsToggle').onclick = async () => {
+    const blocker = document.getElementById('pan-blocker');
     if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
         window.removeEventListener('deviceorientation', handleOrientation);
         watchId = null;
         currentCoords = null;
+        blocker.style.display = 'none';
         document.getElementById('gpsToggle').classList.remove('active');
         if (userMarkerStreets) { userMarkerStreets.remove(); userMarkerHybrid.remove(); }
         userMarkerStreets = userMarkerHybrid = null;
         mapStreets.setBearing(0); mapHybrid.setBearing(0);
     } else {
+        setLoading(true);
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
             const res = await DeviceOrientationEvent.requestPermission();
-            if (res !== 'granted') return;
+            if (res !== 'granted') { setLoading(false); return; }
         }
         document.getElementById('gpsToggle').classList.add('active');
+        blocker.style.display = 'block';
         window.addEventListener('deviceorientation', handleOrientation, true);
+        
         watchId = navigator.geolocation.watchPosition(pos => {
+            setLoading(false);
             currentCoords = [pos.coords.longitude, pos.coords.latitude];
             const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
             
@@ -209,11 +237,8 @@ document.getElementById('gpsToggle').onclick = async () => {
             } else {
                 userMarkerStreets.setLngLat(currentCoords); userMarkerHybrid.setLngLat(currentCoords);
             }
-            
-            // Keep location in absolute center for orbital rotation
             activeMap.jumpTo({ center: currentCoords });
-            
-        }, null, { enableHighAccuracy: true });
+        }, err => setLoading(false), { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
     }
 };
 
@@ -242,10 +267,12 @@ function clearRoute() {
 
 function fetchRoute() {
     if (routePoints.length < 2) return;
+    setLoading(true);
     fetch(`https://api.openrouteservice.org/v2/directions/${document.getElementById('mode').value}/geojson`, {
         method: 'POST', headers: { "Authorization": ORS_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ coordinates: routePoints })
     }).then(res => res.json()).then(data => {
+        setLoading(false);
         if (!data.features?.[0]) return;
         const feat = data.features[0];
         document.getElementById('route-info').innerHTML = `Distance: ${(feat.properties.summary.distance / 1000).toFixed(2)} km | Time: ${Math.round(feat.properties.summary.duration / 60)} min`;
@@ -256,7 +283,7 @@ function fetchRoute() {
             m.addSource('route', { type: 'geojson', data: feat.geometry });
             m.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#0074d9', 'line-width': isMobile ? 10 : 6 } });
         });
-    });
+    }).catch(() => setLoading(false));
 }
 
 function addPin(lngLat, isSearch = false) {
@@ -315,22 +342,29 @@ function addWaypoint(lngLat) {
 
 document.getElementById('searchBox').addEventListener('input', (e) => {
     const q = e.target.value;
+    clearTimeout(searchTimeout);
     if(!q) { document.getElementById('searchResults').style.display = 'none'; return; }
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
-        .then(r => r.json()).then(data => {
-            const res = document.getElementById('searchResults'); res.innerHTML = '';
-            data.slice(0,5).forEach(item => {
-                const d = document.createElement('div'); d.className = 'searchItem'; d.textContent = item.display_name;
-                d.onclick = () => {
-                    const loc = [parseFloat(item.lon), parseFloat(item.lat)];
-                    (currentStyle === 'streets' ? mapStreets : mapHybrid).flyTo({center: loc, zoom: 14});
-                    if(routingEnabled) addPin(loc, true);
-                    res.style.display = 'none'; e.target.value = '';
-                };
-                res.appendChild(d);
-            });
-            res.style.display = 'block';
-        });
+    
+    // 1-second debounce
+    searchTimeout = setTimeout(() => {
+        setLoading(true);
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
+            .then(r => r.json()).then(data => {
+                setLoading(false);
+                const res = document.getElementById('searchResults'); res.innerHTML = '';
+                data.slice(0,5).forEach(item => {
+                    const d = document.createElement('div'); d.className = 'searchItem'; d.textContent = item.display_name;
+                    d.onclick = () => {
+                        const loc = [parseFloat(item.lon), parseFloat(item.lat)];
+                        (currentStyle === 'streets' ? mapStreets : mapHybrid).flyTo({center: loc, zoom: 14});
+                        if(routingEnabled) addPin(loc, true);
+                        res.style.display = 'none'; e.target.value = '';
+                    };
+                    res.appendChild(d);
+                });
+                res.style.display = 'block';
+            }).catch(() => setLoading(false));
+    }, 1000);
 });
 
 document.getElementById('downloadMap').onclick = () => {
