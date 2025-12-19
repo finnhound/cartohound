@@ -298,6 +298,10 @@ button:active { transform: scale(0.97); }
         height: 44px;
     }
     
+    #gpsToggle.active {
+        transform: scale(1.8);
+    }
+    
     #hybridToggle { 
         position: fixed;
         top: auto;
@@ -413,8 +417,27 @@ let userMarkerStreets = null, userMarkerHybrid = null;
 let locationPinStreets = null, locationPinHybrid = null;
 let searchPinStreets = null, searchPinHybrid = null;
 
-const mapStreets = new maplibregl.Map({ container:'map-streets', style:STREETS_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
-const mapHybrid = new maplibregl.Map({ container:'map-hybrid', style:HYBRID_URL, center: savedView?.center||[0,0], zoom: savedView?.zoom ?? 1, attributionControl:false, preserveDrawingBuffer:true });
+const mapStreets = new maplibregl.Map({ 
+    container:'map-streets', 
+    style:STREETS_URL, 
+    center: savedView?.center||[0,0], 
+    zoom: savedView?.zoom ?? 1, 
+    attributionControl:false, 
+    preserveDrawingBuffer:true,
+    refreshExpiredTiles: false,
+    maxTileCacheSize: isMobile ? 50 : 100
+});
+
+const mapHybrid = new maplibregl.Map({ 
+    container:'map-hybrid', 
+    style:HYBRID_URL, 
+    center: savedView?.center||[0,0], 
+    zoom: savedView?.zoom ?? 1, 
+    attributionControl:false, 
+    preserveDrawingBuffer:true,
+    refreshExpiredTiles: false,
+    maxTileCacheSize: isMobile ? 50 : 100
+});
 
 // LOCK VIEWPORT SIZE
 const lockUI = () => {
@@ -561,7 +584,7 @@ async function handleOrientation(event) {
     }
     
     // Only lock bearing if in location mode
-    if (locationMode && currentCoords) {
+    if (locationMode && currentCoords && isMobile) {
         const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
         // Keep user centered and rotate map
         activeMap.easeTo({
@@ -720,6 +743,7 @@ function clearRoute() {
     routePoints = [];
     document.getElementById('route-info').style.display = 'none';
     [mapStreets, mapHybrid].forEach(m => {
+        if (m.getLayer('route-hitarea')) m.removeLayer('route-hitarea');
         if (m.getLayer('route')) m.removeLayer('route');
         if (m.getSource('route')) m.removeSource('route');
     });
@@ -744,7 +768,30 @@ function fetchRoute() {
         [mapStreets, mapHybrid].forEach(m => {
             if (m.getSource('route')) { m.removeLayer('route'); m.removeSource('route'); }
             m.addSource('route', { type: 'geojson', data: feat.geometry });
-            m.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#0074d9', 'line-width': isMobile ? 8 : 6 } });
+            
+            // Thinner visible line on mobile
+            m.addLayer({ 
+                id: 'route', 
+                type: 'line', 
+                source: 'route', 
+                paint: { 
+                    'line-color': '#0074d9', 
+                    'line-width': isMobile ? 5 : 6 
+                } 
+            });
+            
+            // Invisible wider hit area for mobile
+            if (isMobile) {
+                m.addLayer({ 
+                    id: 'route-hitarea', 
+                    type: 'line', 
+                    source: 'route', 
+                    paint: { 
+                        'line-color': 'transparent', 
+                        'line-width': 20 
+                    } 
+                });
+            }
         });
 
         const coords = feat.geometry.coordinates;
@@ -884,7 +931,9 @@ function addWaypoint(lngLat) {
 [mapStreets, mapHybrid].forEach(m => m.on('click', (e) => {
     if (!routingEnabled) return;
     if (startMarker && endMarker && m.getLayer('route')) {
-        const features = m.queryRenderedFeatures(e.point, { layers: ['route'] });
+        // Check both visible route and hit area on mobile
+        const layersToCheck = isMobile ? ['route', 'route-hitarea'] : ['route'];
+        const features = m.queryRenderedFeatures(e.point, { layers: layersToCheck });
         if (features.length > 0) { 
             addWaypoint([e.lngLat.lng, e.lngLat.lat]); 
             return; 
