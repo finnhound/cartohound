@@ -20,7 +20,19 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; }
 button, select, input { font:14px 'Inter', sans-serif; }
 
 #searchBox { width:200px; padding:4px; border-radius:4px; border:1px solid #ccc; z-index:26; position:relative; }
-#searchResults { position:absolute; top:38px; right:10px; background:white; border:1px solid #ccc; max-height:180px; overflow-y:auto; width:200px; z-index:30; border-radius:4px; display:none; }
+#searchResults { 
+  position:absolute; 
+  top:38px; 
+  right:10px; 
+  background:white; 
+  border:1px solid #ccc; 
+  max-height:180px; 
+  overflow-y:auto; 
+  width:200px; 
+  z-index:100; /* Increased from 30 to 100 */
+  border-radius:4px; 
+  display:none; 
+}
 
 .searchItem { padding:4px 6px; cursor:pointer; }
 .searchItem:hover { background:#eee; }
@@ -412,14 +424,14 @@ function addWaypoint(lngLat) {
   });
 
   // Double-click to remove
-  wp.getElement().addEventListener('dblclick', (e) => {
-    e.stopPropagation();
+wp.getElement().addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevents map click events from firing
     removeWaypoint(wp);
   });
 
   fetchRoute();
 }
-
+  
 // Remove waypoint function
 function removeWaypoint(wp) {
   const idx = waypointMarkers.indexOf(wp);
@@ -508,3 +520,4 @@ document.getElementById('downloadMap').onclick = () => {
 </script>
 </body>
 </html>
+
