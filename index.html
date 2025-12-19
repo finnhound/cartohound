@@ -152,7 +152,7 @@ let routingEnabled = JSON.parse(localStorage.getItem('mapRouteEnabled') || 'fals
 let watchId = null;
 let currentCoords = null;
 let searchTimeout = null;
-
+let searchMarker = null;
 let routePoints = [];
 let startMarker = null, endMarker = null, waypointMarkers = [];
 let userMarkerStreets = null, userMarkerHybrid = null;
@@ -350,7 +350,15 @@ function fetchRoute() {
             if (m.getSource('route')) { m.removeLayer('route'); m.removeSource('route'); }
             m.addSource('route', { type: 'geojson', data: feat.geometry });
             m.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#0074d9', 'line-width': isMobile ? 10 : 6 } });
-        });
+            const bounds = new maplibregl.LngLatBounds();
+routePoints.forEach(p => bounds.extend(p));
+[mapStreets, mapHybrid].forEach(m => {
+    m.fitBounds(bounds, {
+        padding: isMobile ? 80 : 100, // Extra space around the route
+        maxZoom: 16,
+        duration: 1000 // Smooth zoom animation
+    });
+       });
     }).catch(() => setLoading(false));
 }
 
@@ -430,12 +438,25 @@ document.getElementById('searchBox').addEventListener('input', (e) => {
                 const res = document.getElementById('searchResults'); res.innerHTML = '';
                 data.slice(0,5).forEach(item => {
                     const d = document.createElement('div'); d.className = 'searchItem'; d.textContent = item.display_name;
-                    d.onclick = () => {
-                        const loc = [parseFloat(item.lon), parseFloat(item.lat)];
-                        (currentStyle === 'streets' ? mapStreets : mapHybrid).flyTo({center: loc, zoom: 14});
-                        if(routingEnabled) addPin(loc, true);
-                        res.style.display = 'none'; e.target.value = '';
-                    };
+d.onclick = () => {
+    const loc = [parseFloat(item.lon), parseFloat(item.lat)];
+    const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
+    
+    activeMap.flyTo({center: loc, zoom: 14});
+
+    if(routingEnabled) {
+        addPin(loc, true);
+    } else {
+        // Create or move the Purple Search Pin
+        if (searchMarker) searchMarker.remove();
+        const el = document.createElement('div');
+        el.style.width = pinSize + 'px'; el.style.height = pinSize + 'px';
+        el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#af52de" stroke-width="3"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
+        searchMarker = new maplibregl.Marker({ element: el }).setLngLat(loc).addTo(activeMap);
+    }
+    res.style.display = 'none'; e.target.value = '';
+};
+               
                     res.appendChild(d);
                 });
                 res.style.display = 'block';
@@ -472,6 +493,7 @@ document.getElementById('mode').onchange = () => { if (startMarker && endMarker)
 </script>
 </body>
 </html>
+
 
 
 
