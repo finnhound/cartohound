@@ -236,6 +236,7 @@ mapStreets.on('move', () => syncView(mapStreets, mapHybrid));
 mapHybrid.on('move', () => syncView(mapHybrid, mapStreets));
 
 // --- GPS TRACKING & ORBITAL LOCK ---
+    const HEADING_OFFSET = 15; // Adjust this number if the offset changes
 async function handleOrientation(event) {
     let heading = null;
 
@@ -470,6 +471,7 @@ document.getElementById('mode').onchange = () => { if (startMarker && endMarker)
 </script>
 </body>
 </html>
+
 
 
 
