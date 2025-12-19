@@ -422,9 +422,12 @@ document.getElementById('toggleRoute').onclick = function() {
 };
 document.getElementById('resetRoute').onclick = clearRoute;
 document.getElementById('hybridToggle').onclick = () => showHybrid(currentStyle === 'streets');
+    // Auto-update route when transport mode (Car/Walking/Cycling) is changed
+document.getElementById('mode').onchange = () => { if (startMarker && endMarker) fetchRoute(); };
 </script>
 </body>
 </html>
+
 
 
 
