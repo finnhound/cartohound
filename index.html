@@ -501,44 +501,23 @@ function showHybrid(isHybrid) {
 }
 showHybrid(currentStyle === 'hybrid');
 
-let syncing = false;
 let syncTimeout = null;
 
-function syncView(src, tgt) {
-    if (syncing) return;
-    syncing = true;
-    
-    // Clear any pending sync
-    if (syncTimeout) clearTimeout(syncTimeout);
-    
-    const srcCenter = src.getCenter();
-    const srcZoom = src.getZoom();
-    const srcBearing = src.getBearing();
-    const tgtCenter = tgt.getCenter();
-    const tgtZoom = tgt.getZoom();
-    const tgtBearing = tgt.getBearing();
-    
-    // Only sync if there's a meaningful difference
-    const centerDiff = Math.abs(srcCenter.lng - tgtCenter.lng) + Math.abs(srcCenter.lat - tgtCenter.lat);
-    const zoomDiff = Math.abs(srcZoom - tgtZoom);
-    const bearingDiff = Math.abs(srcBearing - tgtBearing);
-    
-    if (centerDiff > 0.00001 || zoomDiff > 0.01 || bearingDiff > 0.1) {
-        tgt.jumpTo({ 
-            center: [srcCenter.lng, srcCenter.lat], 
-            zoom: srcZoom,
-            bearing: srcBearing
-        });
-    }
-    
-    // Debounce the sync unlock
-    syncTimeout = setTimeout(() => {
-        syncing = false;
-    }, 50);
-}
+let Syncing = false;
+const sync = (src, dest) => {
+    if (Syncing) return;
+    Syncing = true;
+    dest.jumpTo({ 
+        center: src.getCenter(), 
+        zoom: src.getZoom(), 
+        bearing: src.getBearing() 
+    });
+    // Throttles sync to the screen refresh rate
+    requestAnimationFrame(() => Syncing = false);
+};
 
-mapStreets.on('move', () => syncView(mapStreets, mapHybrid));
-mapHybrid.on('move', () => syncView(mapHybrid, mapStreets));
+mapStreets.on('move', () => sync(mapStreets, mapHybrid));
+mapHybrid.on('move', () => sync(mapHybrid, mapStreets));
 
 // Save view on move end
 function saveView() {
@@ -1114,3 +1093,4 @@ updateRouteFromLocationButton();
 </script>
 </body>
 </html>
+
