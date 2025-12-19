@@ -186,35 +186,60 @@ mapHybrid.on('move', () => syncView(mapHybrid, mapStreets));
 // --- GPS TRACKING & ORBITAL LOCK ---
 async function handleOrientation(event) {
     let heading = null;
-
-    // 1. Check for iOS direct compass heading
     if (event.webkitCompassHeading) {
         heading = event.webkitCompassHeading;
-    } 
-    // 2. Check for Android Absolute orientation
-    else if (event.absolute === true && event.alpha !== null) {
+    } else if (event.absolute === true && event.alpha !== null) {
         heading = (360 - event.alpha);
-    } 
-    // 3. Fallback for standard alpha (might require calibration)
-    else if (event.alpha !== null) {
+    } else if (event.alpha !== null) {
         heading = (360 - event.alpha);
     }
-
     if (heading === null) return;
-
-    // Apply rotation to markers
     if (userMarkerStreets) userMarkerStreets.setRotation(heading);
     if (userMarkerHybrid) userMarkerHybrid.setRotation(heading);
-    
-    // Lock map bearing to heading
     if (watchId !== null && currentCoords) {
         const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-        activeMap.jumpTo({ 
-            center: currentCoords, 
-            bearing: heading 
-        });
+        activeMap.jumpTo({ center: currentCoords, bearing: heading });
     }
 }
+
+document.getElementById('gpsToggle').onclick = async () => {
+    const blocker = document.getElementById('pan-blocker');
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        window.removeEventListener('deviceorientation', handleOrientation);
+        watchId = null;
+        currentCoords = null;
+        blocker.style.display = 'none';
+        document.getElementById('gpsToggle').classList.remove('active');
+        if (userMarkerStreets) { userMarkerStreets.remove(); userMarkerHybrid.remove(); }
+        userMarkerStreets = userMarkerHybrid = null;
+        mapStreets.setBearing(0); mapHybrid.setBearing(0);
+    } else {
+        setLoading(true);
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const res = await DeviceOrientationEvent.requestPermission();
+            if (res !== 'granted') { setLoading(false); return; }
+        }
+        document.getElementById('gpsToggle').classList.add('active');
+        blocker.style.display = 'block';
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        watchId = navigator.geolocation.watchPosition(pos => {
+            setLoading(false);
+            currentCoords = [pos.coords.longitude, pos.coords.latitude];
+            const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
+            if (!userMarkerStreets) {
+                const el1 = document.createElement('div'); el1.innerHTML = arrowSVG;
+                const el2 = document.createElement('div'); el2.innerHTML = arrowSVG;
+                userMarkerStreets = new maplibregl.Marker({element: el1, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapStreets);
+                userMarkerHybrid = new maplibregl.Marker({element: el2, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapHybrid);
+                activeMap.flyTo({center: currentCoords, zoom: 17});
+            } else {
+                userMarkerStreets.setLngLat(currentCoords); userMarkerHybrid.setLngLat(currentCoords);
+            }
+            activeMap.jumpTo({ center: currentCoords });
+        }, err => setLoading(false), { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+    }
+};
 
 // --- ROUTING ENGINE ---
 function updateSearchPlaceholder() {
@@ -376,4 +401,5 @@ document.getElementById('hybridToggle').onclick = () => showHybrid(currentStyle 
 </script>
 </body>
 </html>
+
 
