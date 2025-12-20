@@ -765,17 +765,33 @@ function fetchRoute() {
             if (m.getLayer('route')) m.removeLayer('route');
             if (m.getSource('route')) m.removeSource('route');
 
-            m.addSource('route', { type: 'geojson', data: feat.geometry });
-            m.addLayer({
-                id: 'route',
-                type: 'line',
-                source: 'route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: { 
-                    'line-color': '#0074d9', 
-                    'line-width': isMobile ? 8 : 5 // Thicker for mobile visibility
-                }
-            });
+m.addSource('route', { type: 'geojson', data: feat.geometry });
+
+/* Visible route */
+m.addLayer({
+    id: 'route',
+    type: 'line',
+    source: 'route',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: { 
+        'line-color': '#0074d9', 
+        'line-width': isMobile ? 8 : 5
+    }
+});
+
+/* Invisible hit area for mobile taps */
+m.addLayer({
+    id: 'route-hitarea',
+    type: 'line',
+    source: 'route',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: {
+        'line-color': '#000',
+        'line-opacity': 0,
+        'line-width': isMobile ? 30 : 10
+    }
+});
+
         });
     })
     .catch(err => {
