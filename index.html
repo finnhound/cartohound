@@ -429,6 +429,35 @@ button:active { transform: scale(0.97); }
     color: #007aff;
 }
 
+    @media screen and (orientation: portrait) {
+
+    .route-info {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) scale(1.6) !important;
+        transform-origin: top center;
+        max-width: 90%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+}
+
+    /* MOBILE FIX: Properly align route info pill */
+@media screen and (orientation: portrait) {
+
+    .route-info {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) scale(1.6) !important;
+        transform-origin: top center;
+        max-width: 90%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+}
+
     
 </style>
 </head>
@@ -1231,6 +1260,7 @@ updateRouteFromLocationButton();
 </script>
 </body>
 </html>
+
 
 
 
