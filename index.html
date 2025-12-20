@@ -762,8 +762,9 @@ function fetchRoute() {
         // Draw line on both maps
         [mapStreets, mapHybrid].forEach(m => {
             // Clean up old route safely
-            if (m.getLayer('route')) m.removeLayer('route');
-            if (m.getSource('route')) m.removeSource('route');
+if (m.getLayer('route-hitarea')) m.removeLayer('route-hitarea');
+if (m.getLayer('route')) m.removeLayer('route');
+if (m.getSource('route')) m.removeSource('route');
 
 m.addSource('route', { type: 'geojson', data: feat.geometry });
 
@@ -1124,6 +1125,7 @@ updateRouteFromLocationButton();
 </script>
 </body>
 </html>
+
 
 
 
