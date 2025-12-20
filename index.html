@@ -1122,7 +1122,12 @@ document.getElementById('toggleRoute').onclick = function() {
 
 document.getElementById('resetRoute').onclick = clearRoute;
 document.getElementById('hybridToggle').onclick = () => showHybrid(currentStyle === 'streets');
-document.getElementById('mode').onchange = () => { if (startMarker && endMarker) fetchRoute(); };
+document.getElementById('mode').onchange = () => { 
+    if (startMarker && endMarker) {
+        shouldPanToRoute = true;
+        fetchRoute();
+    }
+};
 
 // Route from location button
 document.getElementById('routeFromLocation').onclick = async () => {
@@ -1180,6 +1185,7 @@ updateRouteFromLocationButton();
 </script>
 </body>
 </html>
+
 
 
 
