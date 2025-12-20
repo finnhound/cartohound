@@ -845,48 +845,67 @@ function addPin(lngLat, isSearch = false) {
 
 function addWaypoint(lngLat) {
     const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-    
-    // Create the waypoint visual
     const el = document.createElement('div');
-    el.style.width = '20px';
-    el.style.height = '20px';
-    el.style.background = '#fff';
-    el.style.border = '3px solid #0074d9';
+    
+    // UI Styling: Pinned targets for mobile vs desktop
+    el.style.cursor = 'move';
     el.style.borderRadius = '50%';
-    el.style.cursor = 'pointer';
+    el.style.boxShadow = '0 3px 10px rgba(0,0,0,0.4)';
+    el.style.border = '3px solid white';
+    
+    if (isMobile) {
+        // CRITICAL: Prevents the map from scrolling/panning while you drag the dot
+        el.style.touchAction = 'none'; 
+        el.style.width = '34px'; 
+        el.style.height = '34px';
+        el.style.background = '#8b8aeb'; 
+    } else {
+        el.style.width = '22px'; 
+        el.style.height = '22px';
+        el.style.background = 'rgba(139, 138, 235, 0.9)'; 
+    }
 
-    const m = new maplibregl.Marker({ element: el, draggable: true })
-        .setLngLat(lngLat)
-        .addTo(activeMap);
+    const wp = new maplibregl.Marker({ 
+        element: el, 
+        draggable: true,
+        anchor: 'center'
+    }).setLngLat(lngLat).addTo(activeMap);
 
-    // Insert waypoint into the array BEFORE the end point
+    // FIX: Insert point into the array correctly BEFORE the final destination
     const insertIndex = routePoints.length - 1;
     routePoints.splice(insertIndex, 0, lngLat);
-    waypointMarkers.push(m);
+    waypointMarkers.push(wp);
 
-    // Refresh route
-    fetchRoute();
-
-    // Interaction: Drag to move
-    m.on('dragend', () => {
-        const newPos = [m.getLngLat().lng, m.getLngLat().lat];
-        // Find this marker's current index in our tracking array
-        const idx = waypointMarkers.indexOf(m) + 1; // +1 because index 0 is startMarker
-        routePoints[idx] = newPos;
-        fetchRoute();
+    // DRAG LOGIC: Robust index calculation
+    wp.on('dragstart', () => {
+        if (isMobile) el.style.opacity = '0.6';
     });
 
-    // Interaction: Click to remove
-    el.onclick = (e) => {
-        e.stopPropagation();
-        const idx = waypointMarkers.indexOf(m) + 1;
-        routePoints.splice(idx, 1);
-        waypointMarkers.splice(waypointMarkers.indexOf(m), 1);
-        m.remove();
-        fetchRoute();
-    };
-}
-    
+    wp.on('dragend', () => {
+        if (isMobile) el.style.opacity = '1';
+        
+        // Always calculate index fresh to prevent "disappearing route"
+        const idx = waypointMarkers.indexOf(wp);
+        if (idx !== -1) {
+            // idx + 1 because routePoints[0] is always the startMarker
+            routePoints[idx + 1] = [wp.getLngLat().lng, wp.getLngLat().lat];
+            fetchRoute();
+        }
+    });
+
+    // CLICK LOGIC: Stop propagation to prevent "double-adding" points on mobile
+    el.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        const idx = waypointMarkers.indexOf(wp);
+        if (idx > -1) {
+            waypointMarkers.splice(idx, 1);
+            routePoints.splice(idx + 1, 1); // +1 offset for Start Pin
+            wp.remove();
+            fetchRoute();
+        }
+    });
+
+    // Initial fetch for the new point
     fetchRoute();
 }
 
@@ -1076,5 +1095,6 @@ updateRouteFromLocationButton();
 </script>
 </body>
 </html>
+
 
 
