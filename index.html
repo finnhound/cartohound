@@ -348,6 +348,33 @@ button:active { transform: scale(0.97); }
         height: 15px; 
     }
 }
+
+    /* MOBILE: Slightly larger routing UI */
+@media screen and (orientation: portrait) {
+
+    /* Route info pill */
+    .route-info {
+        transform: scale(1.8) translateX(-50%);
+        transform-origin: top center;
+        padding: 14px 26px;
+        font-size: 15px;
+        letter-spacing: 0.4px;
+    }
+
+    /* Routing controls container */
+    #controls {
+        transform: scale(1.8);
+    }
+
+    /* Route enable / reset buttons */
+    #toggleRoute,
+    #resetRoute,
+    #mode {
+        font-size: 14px;
+        padding: 10px 14px;
+    }
+}
+    
 </style>
 </head>
 <body>
@@ -1125,6 +1152,7 @@ updateRouteFromLocationButton();
 </script>
 </body>
 </html>
+
 
 
 
