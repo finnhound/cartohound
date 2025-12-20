@@ -748,29 +748,7 @@ watchId = getBestAvailableLocation(
     },
     true
 );
-                setLoading(false);
-                currentCoords = [pos.coords.longitude, pos.coords.latitude];
-                const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-                
-                if (!userMarkerStreets) {
-                    const el1 = document.createElement('div'); el1.innerHTML = arrowSVG;
-                    const el2 = document.createElement('div'); el2.innerHTML = arrowSVG;
-                    userMarkerStreets = new maplibregl.Marker({element: el1, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapStreets);
-                    userMarkerHybrid = new maplibregl.Marker({element: el2, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapHybrid);
-                    activeMap.flyTo({center: currentCoords, zoom: 17, duration: 1500});
-                } else {
-                    userMarkerStreets.setLngLat(currentCoords);
-                    userMarkerHybrid.setLngLat(currentCoords);
-                    activeMap.panTo(currentCoords, {duration: 500});
-                }
-            }, err => {
-                setLoading(false);
-                console.error('GPS error:', err);
-            }, { 
-                enableHighAccuracy: true, 
-                maximumAge: 0, 
-                timeout: 10000 
-            });
+        
         }
     } else {
         // PC: Show location pin + route from location
