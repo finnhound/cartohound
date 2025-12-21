@@ -824,6 +824,7 @@ document.getElementById('gpsToggle').onclick = async () => {
                 el1.style.width = '40px';
                 el1.style.height = '40px';
                 el1.style.position = 'relative';
+                el1.style.cursor = 'pointer';
                 
                 // Add accuracy circle that shows on hover/tap
                 const circle1 = document.createElement('div');
@@ -835,6 +836,7 @@ document.getElementById('gpsToggle').onclick = async () => {
                 const icon1 = document.createElement('div');
                 icon1.style.width = '40px';
                 icon1.style.height = '40px';
+                icon1.style.pointerEvents = 'none';
                 icon1.innerHTML = locationPinSVG;
                 el1.appendChild(icon1);
                 
@@ -843,6 +845,7 @@ document.getElementById('gpsToggle').onclick = async () => {
                 el2.style.width = '40px';
                 el2.style.height = '40px';
                 el2.style.position = 'relative';
+                el2.style.cursor = 'pointer';
                 
                 // Add accuracy circle that shows on hover/tap
                 const circle2 = document.createElement('div');
@@ -854,6 +857,7 @@ document.getElementById('gpsToggle').onclick = async () => {
                 const icon2 = document.createElement('div');
                 icon2.style.width = '40px';
                 icon2.style.height = '40px';
+                icon2.style.pointerEvents = 'none';
                 icon2.innerHTML = locationPinSVG;
                 el2.appendChild(icon2);
                 
@@ -1219,33 +1223,37 @@ document.getElementById('searchBox').addEventListener('input', (e) => {
     }
     
     searchTimeout = setTimeout(() => {
-        setLoading(true);
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`)
-            .then(r => r.json()).then(data => {
-                setLoading(false);
-                const res = document.getElementById('searchResults'); 
-                res.innerHTML = '';
-                
-                // Store search results for Enter key handling and focus
-                res.dataset.searchResults = JSON.stringify(data);
-                
-                data.slice(0,5).forEach(item => {
-                    const d = document.createElement('div'); 
-                    d.className = 'searchItem'; 
-                    d.textContent = item.display_name;
-                    d.onclick = () => {
-                        handleSearchSelection(item, e.target);
-                    };
-                    res.appendChild(d);
-                });
-                
-                // Only show if search box is focused
-                if (document.activeElement === e.target) {
-                    res.style.display = 'block';
-                }
-            }).catch(() => setLoading(false));
+        fetchSearchResults(q, e.target);
     }, 800);
 });
+
+function fetchSearchResults(query, searchInput) {
+    setLoading(true);
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+        .then(r => r.json()).then(data => {
+            setLoading(false);
+            const res = document.getElementById('searchResults'); 
+            res.innerHTML = '';
+            
+            // Store search results for Enter key handling and focus
+            res.dataset.searchResults = JSON.stringify(data);
+            
+            data.slice(0,5).forEach(item => {
+                const d = document.createElement('div'); 
+                d.className = 'searchItem'; 
+                d.textContent = item.display_name;
+                d.onclick = () => {
+                    handleSearchSelection(item, searchInput);
+                };
+                res.appendChild(d);
+            });
+            
+            // Only show if search box is focused
+            if (document.activeElement === searchInput) {
+                res.style.display = 'block';
+            }
+        }).catch(() => setLoading(false));
+}
 
 // Handle Enter key in search box
 document.getElementById('searchBox').addEventListener('keydown', (e) => {
@@ -1255,9 +1263,22 @@ document.getElementById('searchBox').addEventListener('keydown', (e) => {
         const searchResults = res.dataset.searchResults ? JSON.parse(res.dataset.searchResults) : null;
         
         if (searchResults && searchResults.length > 0) {
-            // Select first result and close dropdown
+            // We have cached results, use them
             handleSearchSelection(searchResults[0], e.target);
             res.style.display = 'none';
+        } else if (e.target.value) {
+            // No cached results yet, fetch immediately
+            clearTimeout(searchTimeout);
+            setLoading(true);
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(e.target.value)}`)
+                .then(r => r.json()).then(data => {
+                    setLoading(false);
+                    if (data && data.length > 0) {
+                        // Go directly to first result
+                        handleSearchSelection(data[0], e.target);
+                        res.style.display = 'none';
+                    }
+                }).catch(() => setLoading(false));
         }
     }
 });
