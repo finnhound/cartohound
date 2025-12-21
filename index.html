@@ -304,17 +304,19 @@ button:active { transform: scale(0.97); }
     /* ===============================
        SEARCH / ROUTING GUI — TOP RIGHT (THINNER & SCALED)
        =============================== */
-    #controls {
+   #controls {
         position: fixed;
-        top: 18px;
-        right: 18px;
-        left: auto;
+        top: 20px;
+        right: 20px;
+        left: 20px; /* Allow it to stretch horizontally */
+        width: auto; /* Remove fixed 360px */
+        max-width: 400px; /* Cap it for very large phones */
+        margin-left: auto; /* Keep it right-aligned if it doesn't hit the left edge */
         transform: none;
         flex-direction: column;
-        width: 360px; /* Thinner width */
-        padding: 24px 28px; /* Reduced padding */
-        gap: 20px; /* Reduced gap */
-        border-radius: 24px; /* Slightly smaller border radius */
+        padding: 20px; 
+        gap: 12px; 
+        border-radius: 24px; 
         z-index: 30;
         box-shadow: 0 12px 40px rgba(0,0,0,0.4);
     }
@@ -328,30 +330,38 @@ button:active { transform: scale(0.97); }
         min-height: 50px; /* Reduced height */
     }
 
-    #mode,
+   #mode,
     #resetRoute {
         width: 100%;
-        font-size: 20px; /* Smaller font */
-        padding: 16px 20px; /* Thinner padding */
-        border-radius: 12px; /* Smaller border radius */
-        height: auto;
-        min-height: 50px; /* Reduced height */
-        transform: none !important; /* keep animations working */
+        font-size: 18px; 
+        padding: 12px; 
+        border-radius: 12px; 
+        height: 55px; /* Unified touch height */
+        min-height: 55px; 
+        display: none; /* Controlled by .visible class */
+        box-sizing: border-box;
+    }
+
+    #mode.visible, #resetRoute.visible {
+        display: block !important;
+        opacity: 1;
+        max-width: 100%;
     }
 
     /* ===============================
-       ROUTE INFO — BOTTOM CENTER (LARGER)
+       ROUTE INFO — BOTTOM CENTER (SCALED)
        =============================== */
     .route-info {
         position: fixed;
-        bottom: 80px; /* Bottom center positioning */
+        bottom: 120px; /* Raised to avoid overlapping with bottom buttons */
         left: 50%;
         transform: translateX(-50%);
-        font-size: 26px; /* Much larger font */
-        padding: 24px 40px; /* Much larger padding */
-        border-radius: 35px; /* Much larger border radius */
-        max-width: 90vw;
-        white-space: normal;
+        font-size: 20px; /* Adjusted for better readability without crowding */
+        padding: 15px 25px; 
+        border-radius: 50px; 
+        width: 85%; /* Responsive width */
+        max-width: 400px;
+        white-space: nowrap;
         text-align: center;
         z-index: 26;
         box-shadow: 0 10px 30px rgba(0,0,0,0.4);
@@ -522,7 +532,7 @@ const MT_KEY = 'OtdP8RQkvwYY4wHOxlrm';
 const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
 const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
-const isMobile = window.innerHeight > window.innerWidth;
+const isMobile = window.matchMedia("(max-width: 768px)").matches || (window.innerHeight > window.innerWidth);
 const pinSize = isMobile ? 48 : 40;
 
 const savedView = JSON.parse(localStorage.getItem('mapView') || 'null');
