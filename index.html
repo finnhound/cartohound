@@ -116,7 +116,7 @@ button:active { transform: scale(0.97); }
 /* PC Route Info: Larger and more polished */
 .route-info { 
     position:absolute; 
-    top: 90px; 
+    top: 15px;
     left: 50%; 
     transform: translateX(-50%); 
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -128,6 +128,13 @@ button:active { transform: scale(0.97); }
     display: none;
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     letter-spacing: 0.3px;
+    opacity: 0;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.route-info.visible {
+    opacity: 1;
+    display: block;
 }
 
 .hint-text {
@@ -195,10 +202,10 @@ button:active { transform: scale(0.97); }
 }
 #downloadMap:active, #gpsToggle:active, #hybridToggle:active, #toggleRoute:active { transform: scale(0.95); }
 
-#toggleRoute { top:20px; }
-#gpsToggle { top:75px; }
-#downloadMap { top:130px; }
-#hybridToggle { top:185px; }
+#toggleRoute { top:15px; }
+#gpsToggle { top:70px; }
+#downloadMap { top:125px; }
+#hybridToggle { top:180px; }
 
 #toggleRoute.active {
     background: #007aff;
@@ -533,9 +540,9 @@ if (!isMobile) {
     controls.style.right = '90px';
     controls.style.left = 'auto';
     controls.style.transform = 'none';
-    controls.style.transition = 'width 0.3s ease, padding 0.3s ease';
+    controls.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
     controls.style.width = 'auto';
-    controls.style.top = '20px'; // Align with buttons
+    controls.style.top = '15px'; // Align with buttons
 }
 
 function clearRoute() {
@@ -544,7 +551,17 @@ function clearRoute() {
     if (startMarker) { startMarker.remove(); startMarker = null; }
     if (endMarker) { endMarker.remove(); endMarker = null; }
     routePoints = [];
-    document.getElementById('route-info').style.display = 'none';
+    const routeInfo = document.getElementById('route-info');
+    
+    if (!isMobile) {
+        routeInfo.classList.remove('visible');
+        setTimeout(() => {
+            routeInfo.style.display = 'none';
+        }, 350);
+    } else {
+        routeInfo.style.display = 'none';
+    }
+    
     [mapStreets, mapHybrid].forEach(m => {
         if (m.getLayer('route-hitarea')) m.removeLayer('route-hitarea');
         if (m.getLayer('route')) m.removeLayer('route');
@@ -783,9 +800,8 @@ document.getElementById('gpsToggle').onclick = async () => {
                 // Pan to location
                 activeMap.flyTo({center: currentCoords, zoom: Math.max(activeMap.getZoom(), 14), duration: 1500});
                 
-                // If routing enabled, override start point
-                if (routingEnabled) {
-                    if (startMarker) startMarker.remove();
+                // If routing enabled and NO route exists yet, set as start point
+                if (routingEnabled && !startMarker) {
                     addPin(currentCoords, false);
                 }
                 
@@ -796,11 +812,7 @@ document.getElementById('gpsToggle').onclick = async () => {
                         locationPinStreets.setLngLat(currentCoords);
                         locationPinHybrid.setLngLat(currentCoords);
                     }
-                    if (routingEnabled && startMarker) {
-                        routePoints[0] = currentCoords;
-                        startMarker.setLngLat(currentCoords);
-                        if (endMarker) fetchRoute();
-                    }
+                    // Don't update route if it already exists
                 }, null, { enableHighAccuracy: true, maximumAge: 5000 });
             }, err => {
                 setLoading(false);
@@ -876,8 +888,18 @@ function fetchRoute() {
         const dist = (feat.properties.summary.distance / 1000).toFixed(1);
         const timeMinutes = feat.properties.summary.duration / 60;
         const timeStr = formatTime(timeMinutes);
-        document.getElementById('route-info').innerHTML = `<b>${dist} km</b> | ${timeStr}`;
-        document.getElementById('route-info').style.display = 'block';
+        const routeInfo = document.getElementById('route-info');
+        routeInfo.innerHTML = `<b>${dist} km</b> | ${timeStr}`;
+        routeInfo.style.display = 'block';
+        
+        // Animate route info on PC
+        if (!isMobile) {
+            setTimeout(() => {
+                routeInfo.classList.add('visible');
+            }, 50);
+        } else {
+            routeInfo.style.opacity = '1';
+        }
 
         // Draw line on both maps
         [mapStreets, mapHybrid].forEach(m => {
@@ -1302,26 +1324,35 @@ document.getElementById('toggleRoute').onclick = function() {
     if (routingEnabled) {
         this.classList.add('active');
         if (!isMobile) {
-            // Add visible class to trigger fade-in and slide animation
-            setTimeout(() => {
-                document.getElementById('mode').style.display = 'block';
-                document.getElementById('resetRoute').style.display = 'block';
-                requestAnimationFrame(() => {
-                    document.getElementById('mode').classList.add('visible');
-                    document.getElementById('resetRoute').classList.add('visible');
-                });
-            }, 50);
+            // Trigger reflow to ensure smooth animation
+            const mode = document.getElementById('mode');
+            const reset = document.getElementById('resetRoute');
+            
+            mode.style.display = 'block';
+            reset.style.display = 'block';
+            
+            // Force reflow
+            void mode.offsetWidth;
+            void reset.offsetWidth;
+            
+            requestAnimationFrame(() => {
+                mode.classList.add('visible');
+                reset.classList.add('visible');
+            });
         }
     } else {
         this.classList.remove('active');
         if (!isMobile) {
-            // Remove visible class to trigger fade-out
-            document.getElementById('mode').classList.remove('visible');
-            document.getElementById('resetRoute').classList.remove('visible');
+            const mode = document.getElementById('mode');
+            const reset = document.getElementById('resetRoute');
+            
+            mode.classList.remove('visible');
+            reset.classList.remove('visible');
+            
             setTimeout(() => {
-                document.getElementById('mode').style.display = 'none';
-                document.getElementById('resetRoute').style.display = 'none';
-            }, 300);
+                mode.style.display = 'none';
+                reset.style.display = 'none';
+            }, 350);
         }
         clearRoute();
     }
