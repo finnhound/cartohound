@@ -595,6 +595,25 @@ const arrowSVG = `
 const locationPinSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="3"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>`;
 const searchPinSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="3"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>`;
 
+// Accuracy circle styling for PC only
+const accuracyCircleStyle = `
+<style>
+.accuracy-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(0, 122, 255, 0.08);
+    border: 2px solid rgba(0, 122, 255, 0.25);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    transform: translate(-50%, -50%);
+}
+.location-pin-wrapper:hover .accuracy-circle {
+    opacity: 1;
+}
+</style>
+`;
+
 function setLoading(active) {
     const bar = document.getElementById('loading-bar');
     if (active) {
@@ -604,6 +623,27 @@ function setLoading(active) {
         bar.style.width = '100%';
         setTimeout(() => { bar.style.opacity = '0'; bar.style.width = '0%'; }, 300);
     }
+}
+
+// Inject accuracy circle styles for PC
+if (!isMobile) {
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+        .accuracy-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(0, 122, 255, 0.08);
+            border: 2px solid rgba(0, 122, 255, 0.25);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            transform: translate(-50%, -50%);
+        }
+        .location-pin-wrapper:hover .accuracy-circle {
+            opacity: 1;
+        }
+    `;
+    document.head.appendChild(styleEl);
 }
 
 function showHybrid(isHybrid) {
@@ -781,16 +821,52 @@ document.getElementById('gpsToggle').onclick = async () => {
                     locationPinHybrid.remove();
                 }
                 
-                // Create location pins
+                // Create location pin elements with accuracy circle for PC
                 const el1 = document.createElement('div');
+                el1.className = 'location-pin-wrapper';
                 el1.style.width = '40px';
                 el1.style.height = '40px';
-                el1.innerHTML = locationPinSVG;
+                el1.style.position = 'relative';
+                
+                if (!isMobile) {
+                    // Add accuracy circle that shows on hover (PC only)
+                    const circle1 = document.createElement('div');
+                    circle1.className = 'accuracy-circle';
+                    circle1.style.width = '120px';
+                    circle1.style.height = '120px';
+                    circle1.style.top = '50%';
+                    circle1.style.left = '50%';
+                    el1.appendChild(circle1);
+                }
+                
+                const icon1 = document.createElement('div');
+                icon1.style.width = '40px';
+                icon1.style.height = '40px';
+                icon1.innerHTML = locationPinSVG;
+                el1.appendChild(icon1);
                 
                 const el2 = document.createElement('div');
+                el2.className = 'location-pin-wrapper';
                 el2.style.width = '40px';
                 el2.style.height = '40px';
-                el2.innerHTML = locationPinSVG;
+                el2.style.position = 'relative';
+                
+                if (!isMobile) {
+                    // Add accuracy circle that shows on hover (PC only)
+                    const circle2 = document.createElement('div');
+                    circle2.className = 'accuracy-circle';
+                    circle2.style.width = '120px';
+                    circle2.style.height = '120px';
+                    circle2.style.top = '50%';
+                    circle2.style.left = '50%';
+                    el2.appendChild(circle2);
+                }
+                
+                const icon2 = document.createElement('div');
+                icon2.style.width = '40px';
+                icon2.style.height = '40px';
+                icon2.innerHTML = locationPinSVG;
+                el2.appendChild(icon2);
                 
                 locationPinStreets = new maplibregl.Marker({element: el1}).setLngLat(currentCoords).addTo(mapStreets);
                 locationPinHybrid = new maplibregl.Marker({element: el2}).setLngLat(currentCoords).addTo(mapHybrid);
