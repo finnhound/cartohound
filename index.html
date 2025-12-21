@@ -304,30 +304,42 @@ button:active { transform: scale(0.97); }
     /* ===============================
        SEARCH / ROUTING GUI — TOP RIGHT (THINNER & SCALED)
        =============================== */
-   #controls {
+#controls {
         position: fixed;
         top: 20px;
         right: 20px;
-        left: 20px; /* Allow it to stretch horizontally */
-        width: auto; /* Remove fixed 360px */
-        max-width: 400px; /* Cap it for very large phones */
-        margin-left: auto; /* Keep it right-aligned if it doesn't hit the left edge */
-        transform: none;
+        left: 20px;
+        width: auto;
+        max-width: 450px;
+        margin-left: auto;
         flex-direction: column;
         padding: 20px; 
-        gap: 12px; 
+        gap: 15px; /* Increased gap for larger elements */
         border-radius: 24px; 
         z-index: 30;
         box-shadow: 0 12px 40px rgba(0,0,0,0.4);
     }
 
-    #searchBox {
+#searchBox {
         width: 100%;
-        font-size: 22px; /* Smaller font */
-        padding: 16px 20px; /* Thinner padding */
-        border-radius: 12px; /* Smaller border radius */
-        height: auto;
-        min-height: 50px; /* Reduced height */
+        font-size: 26px !important; /* Force larger text */
+        padding: 18px 22px; 
+        border-radius: 14px; 
+        height: 65px; /* Increased height for larger text */
+        box-sizing: border-box;
+    }
+
+    .searchItem {
+        padding: 20px 24px; /* Larger touch area */
+        font-size: 22px; /* Matches the larger UI scale */
+        line-height: 1.4;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    #searchResults {
+        max-height: 40vh; /* Allow more results to show on the big screen */
+        border-radius: 14px;
+        top: 85px; /* Adjust based on new searchBox height */
     }
 
    #mode,
@@ -348,24 +360,28 @@ button:active { transform: scale(0.97); }
         max-width: 100%;
     }
 
-    /* ===============================
-       ROUTE INFO — BOTTOM CENTER (SCALED)
+  /* ===============================
+       ROUTE INFO — BOTTOM CENTER (SCALED PILL)
        =============================== */
     .route-info {
         position: fixed;
-        bottom: 120px; /* Raised to avoid overlapping with bottom buttons */
+        bottom: 125px; /* Sits above the bottom right buttons */
         left: 50%;
         transform: translateX(-50%);
-        font-size: 20px; /* Adjusted for better readability without crowding */
-        padding: 15px 25px; 
+        font-size: 22px; /* Large readable text */
+        padding: 15px 30px; 
         border-radius: 50px; 
-        width: 85%; /* Responsive width */
-        max-width: 400px;
+        width: auto; /* Shrinks to fit text */
+        min-width: 180px;
+        max-width: 85vw; /* Prevents edge-to-edge covering */
         white-space: nowrap;
         text-align: center;
         z-index: 26;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         font-weight: bold;
+        display: none; /* Controlled by JS */
+        opacity: 1;
     }
 
     /* ===============================
