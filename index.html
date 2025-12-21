@@ -52,6 +52,31 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: h
     box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
 }
 
+#mode, #resetRoute {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    border: none;
+    transition: opacity 0.3s ease, max-width 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+}
+
+#mode.visible, #resetRoute.visible {
+    opacity: 1;
+    max-width: 200px;
+    padding: 8px 14px;
+    border: 1px solid #ddd;
+}
+
+#mode.visible {
+    margin: 0;
+}
+
+#resetRoute.visible {
+    margin: 0;
+}
+
 #searchResults { 
     position:absolute; 
     top:50px; 
@@ -508,8 +533,9 @@ if (!isMobile) {
     controls.style.right = '90px';
     controls.style.left = 'auto';
     controls.style.transform = 'none';
-    controls.style.transition = 'width 0.3s ease';
+    controls.style.transition = 'width 0.3s ease, padding 0.3s ease';
     controls.style.width = 'auto';
+    controls.style.top = '20px'; // Align with buttons
 }
 
 function clearRoute() {
@@ -1276,14 +1302,26 @@ document.getElementById('toggleRoute').onclick = function() {
     if (routingEnabled) {
         this.classList.add('active');
         if (!isMobile) {
-            document.getElementById('mode').style.display = 'block';
-            document.getElementById('resetRoute').style.display = 'block';
+            // Add visible class to trigger fade-in and slide animation
+            setTimeout(() => {
+                document.getElementById('mode').style.display = 'block';
+                document.getElementById('resetRoute').style.display = 'block';
+                requestAnimationFrame(() => {
+                    document.getElementById('mode').classList.add('visible');
+                    document.getElementById('resetRoute').classList.add('visible');
+                });
+            }, 50);
         }
     } else {
         this.classList.remove('active');
         if (!isMobile) {
-            document.getElementById('mode').style.display = 'none';
-            document.getElementById('resetRoute').style.display = 'none';
+            // Remove visible class to trigger fade-out
+            document.getElementById('mode').classList.remove('visible');
+            document.getElementById('resetRoute').classList.remove('visible');
+            setTimeout(() => {
+                document.getElementById('mode').style.display = 'none';
+                document.getElementById('resetRoute').style.display = 'none';
+            }, 300);
         }
         clearRoute();
     }
