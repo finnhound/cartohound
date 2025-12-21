@@ -305,19 +305,14 @@ button:active { transform: scale(0.97); }
        SEARCH / ROUTING GUI — TOP RIGHT (THINNER & SCALED)
        =============================== */
     #controls {
-        position: fixed;
-        top: 18px;
-        right: 18px;
-        left: auto;
-        transform: none;
-        flex-direction: column;
-        width: 360px; /* Thinner width */
-        padding: 24px 28px; /* Reduced padding */
-        gap: 20px; /* Reduced gap */
-        border-radius: 24px; /* Slightly smaller border radius */
-        z-index: 30;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+        width: calc(100% - 40px); /* Responsive width */ [cite: 350, 578]
+        max-width: 400px; [cite: 350, 578]
+        left: 20px; [cite: 350, 577]
+        right: auto; [cite: 350, 577]
+        padding: 15px; [cite: 350, 579]
+        gap: 10px; [cite: 351, 580]
     }
+}
 
     #searchBox {
         width: 100%;
@@ -339,41 +334,38 @@ button:active { transform: scale(0.97); }
         line-height: 1.35;
     }
 }
-#mode,
-    #resetRoute {
-        opacity: 0;
-        max-height: 0;
-        overflow: hidden;
-        transition: opacity 0.25s ease, max-height 0.25s ease;
+#mode, #resetRoute {
+        width: 100%; [cite: 350, 578]
+        height: 50px; /* Uniform touch-friendly height */ [cite: 353, 586]
+        font-size: 18px; [cite: 355, 588]
+        margin-top: 10px; [cite: 317, 540]
+        border-radius: 12px; [cite: 353, 585]
+        display: none; /* Controlled by .visible class in JS */
     }
 
-    #mode.visible,
-    #resetRoute.visible {
-        opacity: 1;
-        max-height: 80px;
+    #mode.visible, #resetRoute.visible {
+        display: block !important; [cite: 356, 590]
+        opacity: 1; [cite: 356, 590]
+        max-height: 50px; [cite: 356, 590]
     }
+
     
     /* ===============================
        ROUTE INFO — BOTTOM CENTER (LARGER)
        =============================== */
        .route-info {
-        position: fixed;
-        bottom: 140px;
-        left: 50%;
-        transform: translateX(-50%) translateY(10px);
-        font-size: 20px;
-        padding: 16px 24px;
-        border-radius: 28px;
-        max-width: 85vw;
-        max-height: 120px;
-        overflow: hidden;
-        text-align: center;
-        z-index: 26;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        opacity: 0;
-        transition: opacity 0.3s ease, transform 0.3s ease;
-        white-space: normal;
+        position: fixed; 
+        bottom: 110px; /* Adjusted to sit above hybrid toggle */ 
+        left: 50%; 
+        transform: translateX(-50%); 
+        font-size: 16px; /* Scaled down from 20px for better fit */ [cite: 357, 592]
+        padding: 12px 20px; [cite: 357, 592]
+        width: 80%; [cite: 357, 592]
+        max-width: 300px; [cite: 357, 592]
+        text-align: center; [cite: 358, 593]
+        z-index: 100; [cite: 358, 593]
     }
+}
 
     .route-info.visible {
         opacity: 1;
@@ -546,7 +538,8 @@ const MT_KEY = 'OtdP8RQkvwYY4wHOxlrm';
 const STREETS_URL = `https://api.maptiler.com/maps/019b2817-43ac-7a98-b15b-c204722a617b/style.json?key=${MT_KEY}`;
 const HYBRID_URL = `https://api.maptiler.com/maps/hybrid/style.json?key=${MT_KEY}`;
 
-const isMobile = window.innerHeight > window.innerWidth;
+// Replace the old isMobile line with this 
+const isMobile = window.matchMedia("(max-width: 768px)").matches || window.innerHeight > window.innerWidth; [cite: 621];
 const pinSize = isMobile ? 48 : 40;
 
 const savedView = JSON.parse(localStorage.getItem('mapView') || 'null');
