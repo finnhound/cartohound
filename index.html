@@ -793,7 +793,6 @@ document.getElementById('gpsToggle').onclick = async () => {
         // MOBILE: Toggle location lock mode
         const blocker = document.getElementById('pan-blocker');
         if (watchId !== null && locationMode) {
-            // Disable location mode
             navigator.geolocation.clearWatch(watchId);
             window.removeEventListener('deviceorientation', handleOrientation);
             watchId = null;
@@ -810,7 +809,6 @@ document.getElementById('gpsToggle').onclick = async () => {
             activeMap.setBearing(0);
             lastHeading = null;
         } else {
-            // Enable location mode
             setLoading(true);
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const res = await DeviceOrientationEvent.requestPermission();
@@ -840,98 +838,94 @@ document.getElementById('gpsToggle').onclick = async () => {
             }, err => {
                 setLoading(false);
                 console.error('GPS error:', err);
-            }, { 
-                enableHighAccuracy: true, 
-                maximumAge: 0, 
-                timeout: 10000 
-            });
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
         }
     } else {
-// PC: Show location pin + route from location
-if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-    currentCoords = null;
-    if (locationPinStreets) {
-        locationPinStreets.remove();
-        locationPinHybrid.remove();
-        locationPinStreets = locationPinHybrid = null;
-    }
-    document.getElementById('gpsToggle').classList.remove('active');
-} else {
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(pos => {
-        setLoading(false);
-        currentCoords = [pos.coords.longitude, pos.coords.latitude];
-        
-        // Helper to create the pin element with proper structure
-        const createPin = () => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'location-pin-wrapper';
-            
-            const circle = document.createElement('div');
-            circle.className = 'accuracy-circle';
-            
-            const icon = document.createElement('div');
-            icon.style.width = '32px'; // Larger icon size
-            icon.style.height = '32px';
-            icon.innerHTML = locationPinSVG;
-            
-            wrapper.appendChild(circle);
-            wrapper.appendChild(icon);
-            return { wrapper, circle };
-        };
-
-        const res1 = createPin();
-        const res2 = createPin();
-
-        // Use 'center' anchor to ensure the crosshair is exactly on the coordinate
-        locationPinStreets = new maplibregl.Marker({ element: res1.wrapper, anchor: 'center' })
-            .setLngLat(currentCoords).addTo(mapStreets);
-        locationPinHybrid = new maplibregl.Marker({ element: res2.wrapper, anchor: 'center' })
-            .setLngLat(currentCoords).addTo(mapHybrid);
-        
-        // Update function for accuracy circle scaling
-        const updateAccuracy = () => {
-            try {
-                const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
-                const zoom = map.getZoom();
-                if (!currentCoords || isNaN(zoom)) return;
-
-                const lat = currentCoords[1];
-                const metersPerPixel = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
-                
-                const accuracyRadiusMeters = 50; 
-                const diameter = (accuracyRadiusMeters / metersPerPixel) * 2;
-                
-                [res1.circle, res2.circle].forEach(c => {
-                    c.style.width = diameter + 'px';
-                    c.style.height = diameter + 'px';
-                });
-            } catch (e) { console.error(e); }
-        };
-
-        mapStreets.on('zoom', updateAccuracy);
-        mapHybrid.on('zoom', updateAccuracy);
-        updateAccuracy();
-
-        document.getElementById('gpsToggle').classList.add('active');
-        const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-        activeMap.flyTo({center: currentCoords, zoom: 15, duration: 1500});
-
-        watchId = navigator.geolocation.watchPosition(p => {
-            currentCoords = [p.coords.longitude, p.coords.latitude];
+        // PC: Show location pin + route from location
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            currentCoords = null;
             if (locationPinStreets) {
-                locationPinStreets.setLngLat(currentCoords);
-                locationPinHybrid.setLngLat(currentCoords);
-                updateAccuracy();
+                locationPinStreets.remove();
+                locationPinHybrid.remove();
+                locationPinStreets = locationPinHybrid = null;
             }
-        }, null, { enableHighAccuracy: true });
-    }, err => {
-        setLoading(false);
-        alert('Location error: ' + err.message);
-    });
-}
+            document.getElementById('gpsToggle').classList.remove('active');
+        } else {
+            setLoading(true);
+            navigator.geolocation.getCurrentPosition(pos => {
+                setLoading(false);
+                currentCoords = [pos.coords.longitude, pos.coords.latitude];
+                
+                const createPin = () => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'location-pin-wrapper';
+                    wrapper.style.width = '60px';  // Larger hit area
+                    wrapper.style.height = '60px';
+                    
+                    const circle = document.createElement('div');
+                    circle.className = 'accuracy-circle';
+                    
+                    const icon = document.createElement('div');
+                    icon.style.width = '40px'; // Larger Pin Icon
+                    icon.style.height = '40px';
+                    icon.innerHTML = locationPinSVG;
+                    
+                    wrapper.appendChild(circle);
+                    wrapper.appendChild(icon);
+                    return { wrapper, circle };
+                };
+
+                const res1 = createPin();
+                const res2 = createPin();
+
+                locationPinStreets = new maplibregl.Marker({ element: res1.wrapper, anchor: 'center' })
+                    .setLngLat(currentCoords).addTo(mapStreets);
+                locationPinHybrid = new maplibregl.Marker({ element: res2.wrapper, anchor: 'center' })
+                    .setLngLat(currentCoords).addTo(mapHybrid);
+                
+                const updateAccuracy = () => {
+                    try {
+                        const map = currentStyle === 'streets' ? mapStreets : mapHybrid;
+                        const zoom = map.getZoom();
+                        if (!currentCoords || isNaN(zoom)) return;
+
+                        const lat = currentCoords[1];
+                        const metersPerPixel = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
+                        const accuracyRadiusMeters = 50; 
+                        const diameter = (accuracyRadiusMeters / metersPerPixel) * 2;
+                        
+                        [res1.circle, res2.circle].forEach(c => {
+                            c.style.width = diameter + 'px';
+                            c.style.height = diameter + 'px';
+                        });
+                    } catch (e) { console.error(e); }
+                };
+
+                mapStreets.on('zoom', updateAccuracy);
+                mapHybrid.on('zoom', updateAccuracy);
+                updateAccuracy();
+
+                document.getElementById('gpsToggle').classList.add('active');
+                const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
+                activeMap.flyTo({center: currentCoords, zoom: 15, duration: 1500});
+
+                watchId = navigator.geolocation.watchPosition(p => {
+                    currentCoords = [p.coords.longitude, p.coords.latitude];
+                    if (locationPinStreets) {
+                        locationPinStreets.setLngLat(currentCoords);
+                        locationPinHybrid.setLngLat(currentCoords);
+                        updateAccuracy();
+                    }
+                }, null, { enableHighAccuracy: true });
+            }, err => {
+                setLoading(false);
+                alert('Location error: ' + err.message);
+            });
+        }
+    }
+};
 
 // --- ROUTING ENGINE ---
 function rebuildRoutePoints() {
