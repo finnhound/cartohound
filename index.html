@@ -278,15 +278,19 @@ button:active { transform: scale(0.97); }
     opacity: 1;
 }
 
-/* MOBILE: USE PC UI, JUST SCALED */
-/* MOBILE UI — DIVERGED, TOUCH-FIRST */
+/* ===============================
+   MOBILE UI (PORTRAIT)
+   =============================== */
 @media screen and (orientation: portrait) {
+
     html, body {
         background: #000;
         overflow: hidden;
     }
 
-    /* KEEP MAP SCALING EXACTLY AS IS */
+    /* ===============================
+       MAP — KEEP INTENTIONAL SCALING
+       =============================== */
     #map-streets,
     #map-hybrid {
         width: 45.45%;
@@ -296,103 +300,119 @@ button:active { transform: scale(0.97); }
         position: absolute;
     }
 
-    /* CONTROLS: TOP CENTER, VERTICAL */
+    /* ===============================
+       ROUTING / SEARCH GUI (TOP RIGHT)
+       =============================== */
     #controls {
         position: fixed;
-        top: 14px;
-        left: 50%;
-        transform: translateX(-50%);
+        top: 16px;
+        right: 16px;
+        left: auto;
+        transform: none;
         flex-direction: column;
-        gap: 10px;
-        padding: 12px 14px;
-        border-radius: 16px;
+        width: 260px;
+        padding: 16px 18px;
+        gap: 12px;
+        border-radius: 18px;
         z-index: 30;
-        width: 220px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
     }
 
     #searchBox {
         width: 100%;
-        font-size: 14px;
+        font-size: 16px;
+        padding: 10px 14px;
+        border-radius: 8px;
     }
 
-    button,
-    select {
+    #mode,
+    #resetRoute {
         width: 100%;
-        font-size: 14px;
+        font-size: 15px;
+        padding: 10px 14px;
     }
 
-    /* ROUTE INFO: DIRECTLY BELOW CONTROLS */
+    /* ===============================
+       ROUTE INFO (BELOW ROUTING GUI)
+       =============================== */
     .route-info {
         position: fixed;
+        right: 16px;
         top: auto;
-        left: 50%;
-        transform: translateX(-50%);
-        margin-top: 8px;
-        z-index: 29;
-        border-radius: 18px;
+        margin-top: 10px;
+        transform: none;
+        font-size: 15px;
+        padding: 12px 18px;
+        border-radius: 20px;
         max-width: 260px;
         white-space: normal;
         text-align: center;
+        z-index: 29;
     }
 
-    /* Attach route info visually below controls */
+    /* Attach directly below controls */
     #controls + .route-info {
-        top: calc(14px + 100%);
+        top: calc(16px + 100%);
     }
 
-    /* SIDE BUTTONS: SEPARATED STACK, SAME SIZE */
-    #toggleRoute {
-        position: fixed;
-        right: 16px;
-        bottom: 260px;
-    }
-
-    #gpsToggle {
-        position: fixed;
-        right: 16px;
-        bottom: 200px;
-    }
-
-    #downloadMap {
-        position: fixed;
-        right: 16px;
-        bottom: 140px;
-    }
-
+    /* ===============================
+       SIDE BUTTONS — UNIFORM SCALE
+       =============================== */
+    #toggleRoute,
+    #gpsToggle,
+    #downloadMap,
     #hybridToggle {
-        position: fixed;
-        right: 16px;
-        bottom: 80px;
+        transform: scale(1.25);
+        transform-origin: center;
     }
 
-    /* REMOVE HOVER SCALE ON MOBILE */
+    /* Vertical spacing (no overlap) */
+    #toggleRoute { bottom: 300px; }
+    #gpsToggle    { bottom: 230px; }
+    #downloadMap  { bottom: 160px; }
+    #hybridToggle { bottom: 90px; }
+
+    /* Prevent hover/active conflicts */
     #toggleRoute:hover,
     #gpsToggle:hover,
     #downloadMap:hover,
-    #hybridToggle:hover {
-        transform: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    #hybridToggle:hover,
+    #toggleRoute:active,
+    #gpsToggle:active,
+    #downloadMap:active,
+    #hybridToggle:active {
+        transform: scale(1.25);
     }
 
-    /* ATTRIBUTION: LARGER + CENTERED */
+    /* ===============================
+       ATTRIBUTION — LARGER
+       =============================== */
     .attribution-text {
         position: fixed;
         bottom: 12px;
         left: 50%;
         transform: translateX(-50%);
-        font-size: 12px;
-        padding: 6px 10px;
+        font-size: 13px;
+        padding: 8px 12px;
+        border-radius: 6px;
         text-align: center;
+        z-index: 20;
     }
 
-    /* MAPTILER LOGO */
+    /* ===============================
+       MAPTILER LOGO
+       =============================== */
     .maptiler-logo {
         position: fixed;
         bottom: 52px;
         left: 12px;
+        transform: scale(1.2);
+        transform-origin: bottom left;
     }
 
-    /* HIDE DEFAULT MAPLIBRE CONTROLS */
+    /* ===============================
+       HIDE DEFAULT MAP CONTROLS
+       =============================== */
     .maplibregl-ctrl-group {
         display: none !important;
     }
