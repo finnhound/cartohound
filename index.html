@@ -1116,8 +1116,9 @@ document.getElementById('downloadMap').onclick = async () => {
     setLoading(true);
     
     // Calculate how much bigger the canvas needs to be
-    // If we're at zoom 10 and want zoom 17 tiles, we need 2^(17-10) = 128x more pixels
-    const zoomDifference = 17 - originalZoom;
+    // If we're at zoom 10 and want zoom 15 tiles, we need 2^(15-10) = 32x more pixels
+    const targetZoom = 15;
+    const zoomDifference = targetZoom - originalZoom;
     const scaleFactor = Math.pow(2, zoomDifference);
     
     const originalWidth = activeMap.getContainer().offsetWidth;
@@ -1134,12 +1135,12 @@ document.getElementById('downloadMap').onclick = async () => {
     hiddenContainer.style.left = '-99999px';
     document.body.appendChild(hiddenContainer);
     
-    // Create temporary map at zoom 17 with same center
+    // Create temporary map at zoom 15 with same center
     const tempMap = new maplibregl.Map({
         container: hiddenContainer,
         style: currentStyle === 'streets' ? STREETS_URL : HYBRID_URL,
         center: originalCenter,
-        zoom: 17,
+        zoom: targetZoom,
         bearing: originalBearing,
         pitch: originalPitch,
         attributionControl: false,
@@ -1162,16 +1163,18 @@ document.getElementById('downloadMap').onclick = async () => {
     const ctx = tempCanvas.getContext('2d');
     ctx.drawImage(mapCanvas, 0, 0);
     
-    // Add attribution
+    // Add attribution with FIXED small size
     const attr = "© MapLibre | © ORS | © OpenStreetMap | © MapTiler";
-    ctx.font = Math.floor(14 * scaleFactor) + "px Inter, sans-serif";
+    const fontSize = 14; // Fixed size
+    const padding = 20;
+    const boxHeight = 35;
+    
+    ctx.font = fontSize + "px Inter, sans-serif";
     const textWidth = ctx.measureText(attr).width;
-    const attrPadding = 20 * scaleFactor;
-    const attrHeight = 35 * scaleFactor;
     ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.fillRect(tempCanvas.width - textWidth - attrPadding, tempCanvas.height - attrHeight, textWidth + attrPadding, attrHeight);
+    ctx.fillRect(tempCanvas.width - textWidth - padding, tempCanvas.height - boxHeight, textWidth + padding, boxHeight);
     ctx.fillStyle = "#333";
-    ctx.fillText(attr, tempCanvas.width - textWidth - (attrPadding/2), tempCanvas.height - (attrHeight/3));
+    ctx.fillText(attr, tempCanvas.width - textWidth - (padding/2), tempCanvas.height - 12);
     
     // Clean up temp map
     tempMap.remove();
@@ -1180,7 +1183,7 @@ document.getElementById('downloadMap').onclick = async () => {
     // Download
     const a = document.createElement('a');
     a.href = tempCanvas.toDataURL();
-    a.download = `map-zoom17-${Date.now()}.png`;
+    a.download = `map-zoom${targetZoom}-${Date.now()}.png`;
     a.click();
     
     setLoading(false);
