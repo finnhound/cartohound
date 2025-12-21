@@ -279,7 +279,7 @@ button:active { transform: scale(0.97); }
 }
 
 /* ===============================
-   MOBILE UI (PORTRAIT)
+   MOBILE UI (PORTRAIT) — EXTRA LARGE
    =============================== */
 @media screen and (orientation: portrait) {
 
@@ -301,78 +301,79 @@ button:active { transform: scale(0.97); }
     }
 
     /* ===============================
-       ROUTING / SEARCH GUI (TOP RIGHT)
+       ROUTING / SEARCH GUI — LARGE + LEFT SHIFT
        =============================== */
     #controls {
         position: fixed;
-        top: 16px;
-        right: 16px;
+        top: 18px;
+        right: 120px; /* pushed left to clear buttons */
         left: auto;
         transform: none;
         flex-direction: column;
-        width: 260px;
-        padding: 16px 18px;
-        gap: 12px;
-        border-radius: 18px;
+        width: 300px;
+        padding: 20px 22px;
+        gap: 16px;
+        border-radius: 20px;
         z-index: 30;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        box-shadow: 0 8px 26px rgba(0,0,0,0.3);
     }
 
     #searchBox {
         width: 100%;
-        font-size: 16px;
-        padding: 10px 14px;
-        border-radius: 8px;
+        font-size: 18px;
+        padding: 14px 18px;
+        border-radius: 10px;
     }
 
     #mode,
     #resetRoute {
         width: 100%;
-        font-size: 15px;
-        padding: 10px 14px;
+        font-size: 17px;
+        padding: 14px 18px;
+        border-radius: 10px;
     }
 
     /* ===============================
-       ROUTE INFO (BELOW ROUTING GUI)
+       ROUTE INFO — BELOW ROUTING GUI
        =============================== */
     .route-info {
         position: fixed;
-        right: 16px;
+        right: 120px;
         top: auto;
-        margin-top: 10px;
+        margin-top: 14px;
         transform: none;
-        font-size: 15px;
-        padding: 12px 18px;
-        border-radius: 20px;
-        max-width: 260px;
+        font-size: 17px;
+        padding: 14px 20px;
+        border-radius: 22px;
+        max-width: 300px;
         white-space: normal;
         text-align: center;
         z-index: 29;
     }
 
-    /* Attach directly below controls */
+    /* Lock route info under controls */
     #controls + .route-info {
-        top: calc(16px + 100%);
+        top: calc(18px + 100%);
     }
 
     /* ===============================
-       SIDE BUTTONS — UNIFORM SCALE
+       SIDE BUTTONS — VERY LARGE + SPACED
        =============================== */
     #toggleRoute,
     #gpsToggle,
     #downloadMap,
     #hybridToggle {
-        transform: scale(1.25);
+        transform: scale(1.6);
         transform-origin: center;
     }
 
-    /* Vertical spacing (no overlap) */
-    #toggleRoute { bottom: 300px; }
-    #gpsToggle    { bottom: 230px; }
+    /* Extra spacing for thumb accuracy */
+    #toggleRoute { bottom: 360px; }
+    #gpsToggle    { bottom: 260px; }
     #downloadMap  { bottom: 160px; }
-    #hybridToggle { bottom: 90px; }
+    #hybridToggle { bottom: 60px; }
 
-    /* Prevent hover/active conflicts */
+    /* Lock scale (no hover shrink) */
     #toggleRoute:hover,
     #gpsToggle:hover,
     #downloadMap:hover,
@@ -381,7 +382,7 @@ button:active { transform: scale(0.97); }
     #gpsToggle:active,
     #downloadMap:active,
     #hybridToggle:active {
-        transform: scale(1.25);
+        transform: scale(1.6);
     }
 
     /* ===============================
@@ -389,12 +390,12 @@ button:active { transform: scale(0.97); }
        =============================== */
     .attribution-text {
         position: fixed;
-        bottom: 12px;
+        bottom: 14px;
         left: 50%;
         transform: translateX(-50%);
-        font-size: 13px;
-        padding: 8px 12px;
-        border-radius: 6px;
+        font-size: 14px;
+        padding: 10px 14px;
+        border-radius: 8px;
         text-align: center;
         z-index: 20;
     }
@@ -404,9 +405,9 @@ button:active { transform: scale(0.97); }
        =============================== */
     .maptiler-logo {
         position: fixed;
-        bottom: 52px;
-        left: 12px;
-        transform: scale(1.2);
+        bottom: 62px;
+        left: 14px;
+        transform: scale(1.25);
         transform-origin: bottom left;
     }
 
