@@ -278,198 +278,55 @@ button:active { transform: scale(0.97); }
     opacity: 1;
 }
 
-/* MOBILE ONLY SCALING (PORTRAIT) */
+/* MOBILE: USE PC UI, JUST SCALED */
 @media screen and (orientation: portrait) {
-    html, body { 
-        background: #000; 
+    html, body {
+        background: #000;
         overflow: hidden;
     }
-    
-    #map-streets, #map-hybrid { 
-        width: 45.45%; 
-        height: 45.45%; 
-        transform: scale(2.2); 
+
+    /* KEEP MAP SCALING EXACTLY AS-IS */
+    #map-streets,
+    #map-hybrid {
+        width: 45.45%;
+        height: 45.45%;
+        transform: scale(2.2);
         transform-origin: top left;
         position: absolute;
     }
-    
-   /* Mobile UI: Top Right Corner Controls */
-    #controls { 
-        position: fixed;
-        flex-direction: column;
-        width: 180px; /* Slimmed width for mobile scaling */
-        padding: 12px 15px; 
-        top: 15px; 
-        right: 15px;
-        left: auto;
-        transform: scale(2.0);
+
+    /* SCALE ENTIRE PC UI UNIFORMLY */
+    #controls,
+    #downloadMap,
+    #gpsToggle,
+    #hybridToggle,
+    #toggleRoute,
+    .route-info,
+    .attribution-text,
+    .maptiler-logo {
+        transform: scale(1.9);
         transform-origin: top right;
-        border-radius: 15px;
-        gap: 8px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    }
-    
-    #searchBox { 
-        width: 100%; 
-        font-size: 14px !important; 
-        padding: 8px 10px !important;
-        border-radius: 6px;
-    }
-    
-    button, select { 
-        width: 100%;
-        padding: 8px 12px !important; 
-        font-size: 13px !important;
-        border-radius: 6px;
-        font-weight: 500;
-    }
-    
-    /* Remove active scale animation on mobile */
-    button:active, select:active { 
-        transform: none !important;
     }
 
-#searchResults {
-        position: absolute;
-        top: 45px; /* Aligned with scaled search box */
-        right: 0;
-        left: 0;
-        width: 100%;
-        max-height: 150px;
+    /* Prevent hover/active animations from fighting scaling */
+    button:hover,
+    button:active {
         transform: none;
-        z-index: 1000;
     }
 
-    .searchItem {
-        padding: 8px 10px;
-        font-size: 13px;
-    }
-
-   /* Route Info: Positioned BELOW the controls on mobile */
-    .route-info { 
-        position: fixed;
-        top: 250px; /* Offset to appear below the scaled controls */
-        right: 15px;
+    /* Keep attribution readable */
+    .attribution-text {
         left: auto;
-        transform: scale(2.0);
-        transform-origin: top right;
-        width: auto; 
-        max-width: 160px;
-        white-space: normal;
-        text-align: center;
-        padding: 10px 15px;
-        border-radius: 20px;
+        right: 10px;
+        bottom: 10px;
     }
-    
-    /* Hide route from location button on mobile */
-    #routeFromLocation {
+
+    /* Hide MapLibre default controls on mobile */
+    .maplibregl-ctrl-group {
         display: none !important;
     }
-
-    /* Side buttons - properly positioned and scaled */
-    #downloadMap { 
-        position: fixed;
-        top: auto;
-        bottom: 740px; 
-        right: 20px;
-        left: auto;
-        transform: scale(2.2);
-        transform-origin: right center;
-        width: 44px;
-        height: 44px;
-    }
-    
-    #gpsToggle { 
-        position: fixed;
-        top: auto;
-        bottom: 620px; 
-        right: 20px;
-        left: auto;
-        transform: scale(2.2);
-        transform-origin: right center;
-        width: 44px;
-        height: 44px;
-    }
-    
-    #gpsToggle.active {
-        transform: scale(2.2);
-    }
-    
-    #hybridToggle { 
-        position: fixed;
-        top: auto;
-        bottom: 500px; 
-        right: 20px;
-        left: auto;
-        transform: scale(2.2);
-        transform-origin: right center;
-        width: 44px;
-        height: 44px;
-    }
-    
-    /* Remove hover/active scale animations on mobile */
-    #downloadMap:hover, #gpsToggle:hover, #hybridToggle:hover {
-        transform: scale(2.2) !important;
-    }
-    
-    #downloadMap:active, #gpsToggle:active, #hybridToggle:active {
-        transform: scale(2.2) !important;
-    }
-    
-    #hybridToggle img {
-        width: 24px;
-        height: 24px;
-    }
-    
-    #downloadMap svg, #gpsToggle svg {
-        width: 24px;
-        height: 24px;
-    }
-    
-    .maplibregl-ctrl-group { display: none !important; }
-    
-    .attribution-text { 
-        position: fixed;
-        bottom: 15px; 
-        left: 50%; 
-        transform: translateX(-50%) scale(1.5); 
-        width: 80%; 
-        text-align: center;
-        font-size: 11px;
-    }
-    
-    /* MapTiler Logo */
-    .maptiler-logo { 
-        position: fixed;
-        bottom: 60px; 
-        left: 15px;
-        transform: scale(1.4);
-        transform-origin: bottom left;
-    }
-    .maptiler-logo img { 
-        height: 15px; 
-    }
 }
 
-    /* If the user turns the phone sideways, force the body to stay vertical */
-@media screen and (orientation: landscape) and (max-width: 950px) {
-    body {
-        width: 100vh;
-        height: 100vw;
-        transform: rotate(-90deg);
-        transform-origin: top left;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        overflow: hidden;
-    }
-    
-    /* Adjust map size to fill the inverted screen */
-    .map {
-        width: 100vh;
-        height: 100vw;
-    }
-}
 </style>
 </head>
 <body>
