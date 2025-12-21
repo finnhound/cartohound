@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -279,7 +280,7 @@ button:active { transform: scale(0.97); }
 }
 
 /* ===============================
-   MOBILE UI (PORTRAIT) — BOTTOM BAR
+   MOBILE UI (PORTRAIT) \u2014 UPDATED LAYOUT
    =============================== */
 @media screen and (orientation: portrait) {
 
@@ -289,7 +290,7 @@ button:active { transform: scale(0.97); }
     }
 
     /* ===============================
-       MAP — KEEP INTENTIONAL SCALING
+       MAP \u2014 KEEP INTENTIONAL SCALING
        =============================== */
     #map-streets,
     #map-hybrid {
@@ -301,7 +302,7 @@ button:active { transform: scale(0.97); }
     }
 
     /* ===============================
-       SEARCH / ROUTING GUI — TOP RIGHT
+       SEARCH / ROUTING GUI \u2014 TOP RIGHT (LARGER)
        =============================== */
     #controls {
         position: fixed;
@@ -310,9 +311,9 @@ button:active { transform: scale(0.97); }
         left: auto;
         transform: none;
         flex-direction: column;
-        width: 340px;
-        padding: 24px 26px;
-        gap: 18px;
+        width: 380px; /* Increased from 340px */
+        padding: 28px 30px; /* Increased padding */
+        gap: 20px; /* Increased gap */
         border-radius: 24px;
         z-index: 30;
         box-shadow: 0 10px 30px rgba(0,0,0,0.35);
@@ -320,31 +321,31 @@ button:active { transform: scale(0.97); }
 
     #searchBox {
         width: 100%;
-        font-size: 20px;
-        padding: 18px 22px;
+        font-size: 22px; /* Increased from 20px */
+        padding: 20px 24px; /* Increased padding */
         border-radius: 12px;
     }
 
     #mode,
     #resetRoute {
         width: 100%;
-        font-size: 18px;
-        padding: 18px 22px;
+        font-size: 20px; /* Increased from 18px */
+        padding: 20px 24px; /* Increased padding */
         border-radius: 12px;
         transform: none !important; /* keep animations working */
     }
 
     /* ===============================
-       ROUTE INFO — ABOVE BUTTON BAR
+       ROUTE INFO \u2014 BOTTOM CENTER (LARGER)
        =============================== */
     .route-info {
         position: fixed;
-        bottom: 140px;
+        bottom: 120px; /* Moved higher to accommodate bottom buttons */
         left: 50%;
         transform: translateX(-50%);
-        font-size: 18px;
-        padding: 16px 28px;
-        border-radius: 28px;
+        font-size: 22px; /* Increased from 18px */
+        padding: 20px 32px; /* Increased padding */
+        border-radius: 30px; /* Increased from 28px */
         max-width: 85vw;
         white-space: normal;
         text-align: center;
@@ -353,7 +354,7 @@ button:active { transform: scale(0.97); }
     }
 
     /* ===============================
-       BOTTOM BUTTON BAR — LARGE
+       BOTTOM BUTTON BAR \u2014 BOTTOM RIGHT (LARGER)
        =============================== */
     #toggleRoute,
     #gpsToggle,
@@ -361,29 +362,30 @@ button:active { transform: scale(0.97); }
     #hybridToggle {
         position: fixed;
         bottom: 32px;
-        width: 68px;
-        height: 68px;
+        right: 20px; /* Changed to right alignment */
+        width: 80px; /* Increased from 68px */
+        height: 80px; /* Increased from 68px */
         z-index: 25;
         transform: none;
     }
 
-    /* Horizontal layout */
-    #toggleRoute { left: calc(50% - 150px); }
-    #gpsToggle    { left: calc(50% - 50px); }
-    #downloadMap  { left: calc(50% + 50px); }
-    #hybridToggle { left: calc(50% + 150px); }
+    /* Vertical layout on the right */
+    #toggleRoute { right: 20px; bottom: 120px; } /* Top button */
+    #gpsToggle    { right: 20px; bottom: 210px; } /* Second button */
+    #downloadMap  { right: 20px; bottom: 300px; } /* Third button */
+    #hybridToggle { right: 20px; bottom: 30px; }  /* Bottom button */
 
-    /* Larger icons */
+    /* Even larger icons */
     #toggleRoute svg,
     #gpsToggle svg,
     #downloadMap svg {
-        width: 34px;
-        height: 34px;
+        width: 40px; /* Increased from 34px */
+        height: 40px; /* Increased from 34px */
     }
 
     #hybridToggle img {
-        width: 34px;
-        height: 34px;
+        width: 40px; /* Increased from 34px */
+        height: 40px; /* Increased from 34px */
     }
 
     /* Disable hover/active scale conflicts */
@@ -399,15 +401,15 @@ button:active { transform: scale(0.97); }
     }
 
     /* ===============================
-       ATTRIBUTION — LARGE & SAFE
+       ATTRIBUTION \u2014 LARGER
        =============================== */
     .attribution-text {
         position: fixed;
-        bottom: 110px;
+        bottom: 16px; /* Slightly higher */
         left: 50%;
         transform: translateX(-50%);
-        font-size: 14px;
-        padding: 10px 16px;
+        font-size: 16px; /* Increased from 14px */
+        padding: 12px 18px; /* Increased padding */
         border-radius: 8px;
         text-align: center;
         z-index: 20;
@@ -418,9 +420,9 @@ button:active { transform: scale(0.97); }
        =============================== */
     .maptiler-logo {
         position: fixed;
-        bottom: 110px;
+        bottom: 90px; /* Adjusted for new button layout */
         left: 16px;
-        transform: scale(1.25);
+        transform: scale(1.4); /* Increased from 1.25 */
         transform-origin: bottom left;
     }
 
@@ -431,9 +433,6 @@ button:active { transform: scale(0.97); }
         display: none !important;
     }
 }
-
-
-
 
 </style>
 </head>
@@ -449,9 +448,9 @@ button:active { transform: scale(0.97); }
   <input id="searchBox" type="text" placeholder="Search"/>
   <div id="searchResults"></div>
   <select id="mode" style="display:none;">
-    <option value="driving-car">🚗 Car</option>
-    <option value="foot-walking">🚶 Walk</option>
-    <option value="cycling-regular">🚴 Bike</option>
+    <option value="driving-car">\ud83d\ude97 Car</option>
+    <option value="foot-walking">\ud83d\udeb6 Walk</option>
+    <option value="cycling-regular">\ud83d\udeb4 Bike</option>
   </select>
   <button id="resetRoute" style="display:none;">Reset</button>
 </div>
@@ -474,15 +473,15 @@ button:active { transform: scale(0.97); }
 
 <div id="hybridToggle"><img src="https://raw.githubusercontent.com/finnhound/cartohound/7b3c8e14c393450a26d9d562c99016afad43d83a/stack%20(1).svg" alt="Hybrid Map Icon"></div>
 
-<button id="routeFromLocation">📍 Route from Location</button>
+<button id="routeFromLocation">\ud83d\udccd Route from Location</button>
 
 <div id="route-info" class="route-info"></div>
 
 <div class="attribution-text">
     <a href="https://maplibre.org/" target="_blank">MapLibre</a> | 
     <a href="https://openrouteservice.org/" target="_blank">ORS</a> | 
-    © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> | 
-    © <a href="https://www.maptiler.com/" target="_blank">MapTiler</a>
+    \u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> | 
+    \u00a9 <a href="https://www.maptiler.com/" target="_blank">MapTiler</a>
 </div>
 <a class="maptiler-logo" href="https://www.maptiler.com" target="_blank">
   <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler logo">
@@ -754,7 +753,7 @@ function handleOrientation(event) {
     }
     lastHeading = heading;
 
-    // FIX: Remove the +90 offset so the arrow points North (0°) correctly
+    // FIX: Remove the +90 offset so the arrow points North (0\u00b0) correctly
     const correctedHeading = heading % 360;
 
     if (userMarkerStreets) {
@@ -1369,7 +1368,7 @@ document.getElementById('downloadMap').onclick = async () => {
         ctx.drawImage(mapCanvas, 0, 0);
         
         // Add attribution with FIXED small size
-        const attr = "© MapLibre | © ORS | © OpenStreetMap | © MapTiler";
+        const attr = "\u00a9 MapLibre | \u00a9 ORS | \u00a9 OpenStreetMap | \u00a9 MapTiler";
         const fontSize = 14;
         const padding = 20;
         const boxHeight = 35;
@@ -1455,7 +1454,7 @@ document.getElementById('downloadMap').onclick = async () => {
     ctx.drawImage(mapCanvas, 0, 0);
     
     // Add attribution with FIXED small size
-    const attr = "© MapLibre | © ORS | © OpenStreetMap | © MapTiler";
+    const attr = "\u00a9 MapLibre | \u00a9 ORS | \u00a9 OpenStreetMap | \u00a9 MapTiler";
     const fontSize = 14; // Fixed size
     const padding = 20;
     const boxHeight = 35;
