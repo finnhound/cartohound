@@ -622,25 +622,14 @@ routingEnabled = false;
 localStorage.setItem('mapRouteEnabled', 'false');
 
 // PC-specific: Setup sliding controls
-if (isMobile) {
+if (!isMobile) {
     const controls = document.getElementById('controls');
-    const routeInfo = document.querySelector('.route-info');
-    
-    // Lock Search to Top Right
-    controls.style.top = '20px';
-    controls.style.right = '20px';
+    controls.style.right = '90px';
     controls.style.left = 'auto';
-    controls.style.bottom = 'auto';
-    controls.style.width = '450px';
-
-    // Lock Route Info to Top Left
-    if (routeInfo) {
-        routeInfo.style.top = '20px';
-        routeInfo.style.left = '20px';
-        routeInfo.style.bottom = 'auto';
-        routeInfo.style.transform = 'none';
-    }
-}
+    controls.style.transform = 'none';
+    controls.style.transition = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+    controls.style.width = 'auto';
+    controls.style.top = '15px'; // Align with buttons
     
     // Position route info pill next to controls
     const routeInfo = document.getElementById('route-info');
