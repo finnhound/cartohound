@@ -1115,12 +1115,23 @@ document.getElementById('downloadMap').onclick = async () => {
     
     setLoading(true);
     
-    // Strategy: Create a hidden map at zoom 17, let it render, capture it, then delete it
+    // Calculate how much bigger the canvas needs to be
+    // If we're at zoom 10 and want zoom 17 tiles, we need 2^(17-10) = 128x more pixels
+    const zoomDifference = 17 - originalZoom;
+    const scaleFactor = Math.pow(2, zoomDifference);
+    
+    const originalWidth = activeMap.getContainer().offsetWidth;
+    const originalHeight = activeMap.getContainer().offsetHeight;
+    const newWidth = originalWidth * scaleFactor;
+    const newHeight = originalHeight * scaleFactor;
+    
+    // Create a hidden container with the calculated size
     const hiddenContainer = document.createElement('div');
-    hiddenContainer.style.width = activeMap.getContainer().offsetWidth + 'px';
-    hiddenContainer.style.height = activeMap.getContainer().offsetHeight + 'px';
+    hiddenContainer.style.width = newWidth + 'px';
+    hiddenContainer.style.height = newHeight + 'px';
     hiddenContainer.style.position = 'absolute';
-    hiddenContainer.style.top = '-9999px';
+    hiddenContainer.style.top = '-99999px';
+    hiddenContainer.style.left = '-99999px';
     document.body.appendChild(hiddenContainer);
     
     // Create temporary map at zoom 17 with same center
@@ -1138,8 +1149,8 @@ document.getElementById('downloadMap').onclick = async () => {
     // Wait for the temp map to fully load
     await new Promise((resolve) => {
         tempMap.on('load', () => {
-            // Wait a bit more for tiles to render
-            setTimeout(resolve, 1500);
+            // Wait for tiles to render
+            setTimeout(resolve, 2000);
         });
     });
     
@@ -1153,12 +1164,14 @@ document.getElementById('downloadMap').onclick = async () => {
     
     // Add attribution
     const attr = "© MapLibre | © ORS | © OpenStreetMap | © MapTiler";
-    ctx.font = "14px Inter, sans-serif";
+    ctx.font = Math.floor(14 * scaleFactor) + "px Inter, sans-serif";
     const textWidth = ctx.measureText(attr).width;
+    const attrPadding = 20 * scaleFactor;
+    const attrHeight = 35 * scaleFactor;
     ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.fillRect(tempCanvas.width - textWidth - 20, tempCanvas.height - 35, textWidth + 20, 35);
+    ctx.fillRect(tempCanvas.width - textWidth - attrPadding, tempCanvas.height - attrHeight, textWidth + attrPadding, attrHeight);
     ctx.fillStyle = "#333";
-    ctx.fillText(attr, tempCanvas.width - textWidth - 10, tempCanvas.height - 12);
+    ctx.fillText(attr, tempCanvas.width - textWidth - (attrPadding/2), tempCanvas.height - (attrHeight/3));
     
     // Clean up temp map
     tempMap.remove();
