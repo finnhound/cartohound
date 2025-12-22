@@ -8,36 +8,18 @@
 <style>
 html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: hidden; background: #000; }
 .map { 
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
+    width:100%; 
+    height:100%; 
+    position:absolute; 
+    top:0; 
+    left:0; 
+    transition: transform 0.3s ease;
+    contain: strict;
 }
 
 #pan-blocker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; display: none; pointer-events: auto; }
 #loading-bar { position: fixed; top: 0; left: 0; width: 0%; height: 6px; background: linear-gradient(90deg, #007aff, #5856d6); z-index: 200; transition: width 0.3s, opacity 0.3s; box-shadow: 0 2px 8px rgba(0,122,255,0.4); }
-#speed-indicator {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.75);
-    color: white;
-    font: 600 22px Inter, sans-serif;
-    padding: 10px 18px;
-    border-radius: 20px;
-    z-index: 200;
-    pointer-events: none;
-    backdrop-filter: blur(6px);
-}
 
-@media (min-width: 769px) {
-    #speed-indicator {
-        display: none; /* PC hidden */
-    }
-}
-    
 /* PC UI: Compact Top-Middle Pill - LARGER */
 #controls { 
     position:absolute; 
@@ -583,7 +565,6 @@ body.location-mode #controls {
 </head>
 <body>
 
-<div id="speed-indicator"></div>
 <div id="loading-bar"></div>
 <div id="pan-blocker"></div>
 
@@ -656,9 +637,6 @@ let startMarker = null, endMarker = null, waypointMarkers = [];
 let userMarkerStreets = null, userMarkerHybrid = null;
 let locationPinStreets = null, locationPinHybrid = null;
 let searchPinStreets = null, searchPinHybrid = null;
-    let compassHeading = null;
-let gpsHeading = null;
-let gpsSpeedKmh = 0;
 
 const mapStreets = new maplibregl.Map({ 
     container:'map-streets', 
@@ -905,63 +883,62 @@ function setMobileRoutingVisible(visible) {
     if (!isMobile) return;
     document.body.classList.toggle('routing-hidden', !visible);
 }
-
-function updateSpeedDisplay() {
-    if (!isMobile) return;
-
-    const el = document.getElementById('speed-indicator');
-    if (!el) return; // 🔒 prevents crash
-
-    el.textContent =
-        gpsSpeedKmh < 1
-            ? '0 km/h'
-            : `${gpsSpeedKmh.toFixed(1)} km/h`;
-}
-
     
 // --- GPS TRACKING ---
 
 let lastHeading = null;
 
 function handleOrientation(event) {
-    if (!isMobile) return; // 🔒 PC unchanged
-
     let heading = null;
 
-    // iOS (already tilt-compensated)
     if (event.webkitCompassHeading !== undefined) {
+        // iOS: already in degrees from North
         heading = event.webkitCompassHeading;
-    }
-    // Android
-    else if (event.alpha !== null) {
-        heading = 360 - event.alpha;
+    } else if (event.alpha !== null && event.beta !== null && event.gamma !== null) {
+        // Android / generic: compute compass heading
+        const alpha = event.alpha * Math.PI / 180; // Z axis
+        const beta = event.beta * Math.PI / 180;   // X axis
+        const gamma = event.gamma * Math.PI / 180; // Y axis
 
-        // Screen orientation correction
-let screenAngle = 0;
+        // Convert to rotation matrix
+        const cA = Math.cos(alpha), sA = Math.sin(alpha);
+        const cB = Math.cos(beta), sB = Math.sin(beta);
+        const cG = Math.cos(gamma), sG = Math.sin(gamma);
 
-if (typeof window.orientation === 'number') {
-    screenAngle = window.orientation;
-} else if (
-    screen.orientation &&
-    typeof screen.orientation.angle === 'number'
-) {
-    screenAngle = screen.orientation.angle;
-}
+        // Compute orientation
+        const x = -cA * sG - sA * sB * cG;
+        const y = -sA * sG + cA * sB * cG;
 
-        heading = (heading + screenAngle) % 360;
+        heading = Math.atan2(x, y) * 180 / Math.PI;
+        if (heading < 0) heading += 360;
     }
 
     if (heading === null) return;
 
-    // Smooth compass only
-    if (compassHeading !== null) {
-        let diff = heading - compassHeading;
+    // Smooth heading
+    if (lastHeading !== null) {
+        let diff = heading - lastHeading;
         if (diff > 180) diff -= 360;
         if (diff < -180) diff += 360;
-        heading = compassHeading + diff * 0.15;
+        heading = lastHeading + diff * 0.25;
+    }
+    lastHeading = heading;
+
+    // Rotate user marker
+    if (userMarkerStreets) {
+        userMarkerStreets.setRotation(heading);
+        userMarkerHybrid.setRotation(heading);
     }
 
-    compassHeading = heading;
+    // Rotate map if in location mode
+    if (locationMode && currentCoords && isMobile) {
+        const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
+        activeMap.easeTo({
+            center: currentCoords,
+            bearing: heading,
+            duration: 100
+        });
+    }
 }
 
 document.getElementById('gpsToggle').onclick = async () => {
@@ -997,112 +974,27 @@ document.getElementById('gpsToggle').onclick = async () => {
             blocker.style.display = 'block';
             window.addEventListener('deviceorientation', handleOrientation, true);
             
-watchId = navigator.geolocation.watchPosition(pos => {
-    setLoading(false);
-
-    currentCoords = [
-        pos.coords.longitude,
-        pos.coords.latitude
-    ];
-
-    // --- SPEED (km/h) ---
-    gpsSpeedKmh = pos.coords.speed
-        ? pos.coords.speed * 3.6
-        : 0;
-
-    // --- GPS HEADING (only valid when moving) ---
-    if (
-        pos.coords.heading !== null &&
-        gpsSpeedKmh >= 3
-    ) {
-        gpsHeading = pos.coords.heading;
-    } else {
-        gpsHeading = null;
-    }
-
-    // --- BLENDED HEADING ---
-    let finalHeading = null;
-
-    if (gpsHeading !== null) {
-        finalHeading = gpsHeading;          // moving
-    } else if (compassHeading !== null) {
-        finalHeading = compassHeading;      // standing still
-    }
-
-    if (finalHeading !== null) {
-        // Smooth final heading
-        if (lastHeading !== null) {
-            let diff = finalHeading - lastHeading;
-            if (diff > 180) diff -= 360;
-            if (diff < -180) diff += 360;
-            finalHeading = lastHeading + diff * 0.2;
+            watchId = navigator.geolocation.watchPosition(pos => {
+                setLoading(false);
+                currentCoords = [pos.coords.longitude, pos.coords.latitude];
+                const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
+                
+                if (!userMarkerStreets) {
+                    const el1 = document.createElement('div'); el1.innerHTML = arrowSVG;
+                    const el2 = document.createElement('div'); el2.innerHTML = arrowSVG;
+                    userMarkerStreets = new maplibregl.Marker({element: el1, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapStreets);
+                    userMarkerHybrid = new maplibregl.Marker({element: el2, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapHybrid);
+                    activeMap.flyTo({center: currentCoords, zoom: 17, duration: 1500});
+                } else {
+                    userMarkerStreets.setLngLat(currentCoords);
+                    userMarkerHybrid.setLngLat(currentCoords);
+                    activeMap.panTo(currentCoords, {duration: 500});
+                }
+            }, err => {
+                setLoading(false);
+                console.error('GPS error:', err);
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
         }
-        lastHeading = finalHeading;
-
-        // Rotate user arrow
-        if (userMarkerStreets) {
-            userMarkerStreets.setRotation(finalHeading);
-            userMarkerHybrid.setRotation(finalHeading);
-        }
-
-        // Rotate map (mobile only)
-        if (locationMode && isMobile) {
-            const activeMap =
-                currentStyle === 'streets'
-                    ? mapStreets
-                    : mapHybrid;
-
-            activeMap.easeTo({
-                center: currentCoords,
-                bearing: finalHeading,
-                duration: 120,
-                easing: t => t
-            });
-        }
-    }
-
-    // --- MARKER POSITION ---
-    if (!userMarkerStreets) {
-        const el1 = document.createElement('div');
-        el1.innerHTML = arrowSVG;
-        const el2 = document.createElement('div');
-        el2.innerHTML = arrowSVG;
-
-        userMarkerStreets = new maplibregl.Marker({
-            element: el1,
-            rotationAlignment: 'map'
-        }).setLngLat(currentCoords).addTo(mapStreets);
-
-        userMarkerHybrid = new maplibregl.Marker({
-            element: el2,
-            rotationAlignment: 'map'
-        }).setLngLat(currentCoords).addTo(mapHybrid);
-
-        const activeMap =
-            currentStyle === 'streets'
-                ? mapStreets
-                : mapHybrid;
-
-        activeMap.flyTo({
-            center: currentCoords,
-            zoom: 17,
-            duration: 1200
-        });
-    } else {
-        userMarkerStreets.setLngLat(currentCoords);
-        userMarkerHybrid.setLngLat(currentCoords);
-    }
-
-    updateSpeedDisplay();
-
-}, err => {
-    setLoading(false);
-    console.error('GPS error:', err);
-}, {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 10000
-});
     } else {
         // PC: Show location pin + route from location
         if (watchId !== null) {
