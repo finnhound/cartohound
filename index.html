@@ -891,18 +891,20 @@ let lastHeading = null;
 function handleOrientation(event) {
     let heading = null;
 
-    // iOS (true compass heading)
+    // iOS
     if (event.webkitCompassHeading !== undefined) {
-        heading = event.webkitCompassHeading;
+        heading = event.webkitCompassHeading; // already 0 = North
     }
-    // Android fallback
+    // Android / generic
     else if (event.alpha !== null) {
-        heading = 360 - event.alpha;
+        // alpha = 0 when device faces East (landscape), so adjust:
+        heading = 360 - event.alpha; 
+        // optional: rotate to match map orientation
     }
 
     if (heading === null) return;
 
-// Smooth heading
+    // Smooth heading
     if (lastHeading !== null) {
         let diff = heading - lastHeading;
         if (diff > 180) diff -= 360;
@@ -911,19 +913,19 @@ function handleOrientation(event) {
     }
     lastHeading = heading;
 
-    // FIX: Remove the +90 offset so the arrow points North (0°) correctly
-    const correctedHeading = heading % 360;
-
+    // Rotate the user marker
     if (userMarkerStreets) {
-        userMarkerStreets.setRotation(correctedHeading);
-        userMarkerHybrid.setRotation(correctedHeading);
+        // Align rotation to the map north
+        userMarkerStreets.setRotation(heading);
+        userMarkerHybrid.setRotation(heading);
     }
 
+    // Optional: pan map in location mode
     if (locationMode && currentCoords && isMobile) {
         const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
         activeMap.easeTo({
             center: currentCoords,
-            bearing: correctedHeading,
+            bearing: heading, // rotate map to match compass
             duration: 100
         });
     }
