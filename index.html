@@ -114,33 +114,56 @@ button, select {
 button:hover, select:hover { background: #f5f5f5; }
 button:active { transform: scale(0.97); }
 
-/* PC Route Info: Larger and more polished */
-.route-info { 
-    position:absolute; 
-    top: 15px;
-    right: auto;
-    left: auto;
-    transform: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* ===============================
+   ROUTE INFO PILL — FADE IN / OUT (ALL PLATFORMS)
+   =============================== */
+.route-info {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+
+    font-weight: 900;
     color: white;
-    padding: 12px 24px; 
-    font: bold 15px 'Inter', sans-serif; 
-    z-index: 24; 
-    border-radius: 25px; 
-    display: none;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    letter-spacing: 0.3px;
-    opacity: 0;
-    transition: opacity 0.35s ease, transform 0.35s ease;
+
+    height: 90px;
+    padding: 0 36px;
+    border-radius: 60px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    line-height: 1;
     white-space: nowrap;
-    max-width: calc(100vw - 700px);
-    overflow: hidden;
-    text-overflow: ellipsis;
+
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+    z-index: 160;
+
+    /* 🔥 ANIMATION BASE STATE */
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    pointer-events: none;
+
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s linear 0.35s;
 }
 
-.route-info.visible {
+/* VISIBLE */
+body.route-active .route-info {
     opacity: 1;
-    display: block;
+    visibility: visible;
+    transform: scale(1);
+    pointer-events: auto;
+
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s;
 }
 
 .hint-text {
@@ -289,6 +312,13 @@ button:active { transform: scale(0.97); }
         overflow: hidden;
     }
 
+    .route-info {
+        font-size: 40px;
+        height: 110px;
+        padding: 0 48px;
+        border-radius: 70px;
+    }
+
     /* ===============================
        MAP — KEEP INTENTIONAL SCALING
        =============================== */
@@ -366,58 +396,7 @@ button:active { transform: scale(0.97); }
         font-size: 28px;
     }
 
-/* ===============================
-   MOBILE ROUTE INFO PILL — REAL DISAPPEAR FIX
-   =============================== */
-.route-info {
-    position: fixed !important;
-    top: 20px !important;
-    left: 20px !important;
 
-    font-size: 40px !important;
-    font-weight: 900;
-    color: white;
-
-    height: 110px;
-    padding: 0 48px;
-    border-radius: 70px;
-
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-
-    line-height: 1 !important;
-    white-space: nowrap;
-
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 12px 45px rgba(0,0,0,0.65);
-    z-index: 160;
-
-    /* 🔥 ACTUAL HIDE STATE */
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.92);
-    pointer-events: none;
-
-    transition:
-        opacity 0.35s ease,
-        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0s linear 0.35s; /* delay hide */
-}
-
-/* 🔥 ACTUAL SHOW STATE */
-body.route-active .route-info {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1);
-    pointer-events: auto;
-
-    transition:
-        opacity 0.35s ease,
-        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0s;
-}
     
 /* ===============================
    MOBILE SEARCH / ROUTING GUI — FADE + SCALE TRANSITION
@@ -728,7 +707,7 @@ if (!isMobile) {
 }
 
 function clearRoute() {
-    setMobileRouteInfoVisible(false);
+    setRouteInfoVisible(false);
     waypointMarkers.forEach(wp => wp.remove()); 
     waypointMarkers = [];
     if (startMarker) { startMarker.remove(); startMarker = null; }
@@ -1138,7 +1117,7 @@ function fetchRoute() {
         const timeStr = formatTime(timeMinutes);
         const routeInfo = document.getElementById('route-info');
         routeInfo.innerHTML = `<b>${dist} km</b> | ${timeStr}`;
-        setMobileRouteInfoVisible(true);
+        setRouteInfoVisible(true);
         routeInfo.style.display = 'block';
         
         // Animate route info on PC and reposition
@@ -1211,9 +1190,15 @@ if (shouldPanToRoute) {
     });
 }
 
-function setMobileRouteInfoVisible(visible) {
-    if (!isMobile) return;
-    document.body.classList.toggle('route-active', visible);
+function setRouteInfoVisible(visible) {
+     document.body.classList.remove('route-active');
+
+    if (!visible) return;
+
+    // 🔥 FORCE STYLE FLUSH SO FIRST ANIMATION PLAYS
+    void document.body.offsetHeight;
+
+    document.body.classList.add('route-active');
 }
     
 function addPin(lngLat, isSearch = false) {
@@ -1663,7 +1648,7 @@ document.getElementById('toggleRoute').onclick = function() {
             reset.classList.add('visible');
         });
     } else {
-        setMobileRouteInfoVisible(false);
+        setRouteInfoVisible(false);
         setMobileRoutingVisible(false);
         this.classList.remove('active');
         mode.classList.remove('visible');
