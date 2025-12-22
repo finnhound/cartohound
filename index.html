@@ -926,9 +926,8 @@ function handleOrientation(event) {
 
     // Rotate user marker
     if (userMarkerStreets) {
-const correctedHeading = (heading) % 360; // flip to correct south/north inversion
-userMarkerStreets.setRotation(correctedHeading);
-userMarkerHybrid.setRotation(correctedHeading);
+        userMarkerStreets.setRotation(heading);
+        userMarkerHybrid.setRotation(heading);
     }
 
     // Rotate map if in location mode
@@ -936,7 +935,7 @@ userMarkerHybrid.setRotation(correctedHeading);
         const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
         activeMap.easeTo({
             center: currentCoords,
-            bearing: correctedHeading,
+            bearing: heading,
             duration: 100
         });
     }
