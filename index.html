@@ -115,69 +115,75 @@ button:hover, select:hover { background: #f5f5f5; }
 button:active { transform: scale(0.97); }
 
 /* ===============================
-   ROUTE INFO PILL — FADE IN / OUT (ALL PLATFORMS)
+   ROUTE INFO PILL — BASE (PC)
    =============================== */
 .route-info {
     position: fixed;
     top: 20px;
     left: 20px;
 
-    font-weight: 900;
-    color: white;
+    height: 56px;
+    padding: 0 22px;
+    border-radius: 28px;
 
-    height: 90px;
-    padding: 0 36px;
-    border-radius: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.45);
 
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
 
-    line-height: 1;
-    white-space: nowrap;
-
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 10px 35px rgba(0,0,0,0.6);
-    z-index: 160;
-
-    /* 🔥 ANIMATION BASE STATE */
     opacity: 0;
     visibility: hidden;
-    transform: scale(0.95);
+    transform: scale(0.96);
     pointer-events: none;
 
     transition:
-        opacity 0.35s ease,
-        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0s linear 0.35s;
+        opacity 0.3s ease,
+        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s linear 0.3s;
+
+    z-index: 160;
 }
 
-/* VISIBLE */
-body.route-active .route-info {
+/* TEXT — THIS FIXES CENTERING */
+.route-info-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+
+    line-height: 1;          /* 🔥 critical */
+    white-space: nowrap;
+    display: block;          /* 🔥 critical */
+}
+
+/* VISIBLE STATE */
+.route-info.is-visible {
     opacity: 1;
     visibility: visible;
     transform: scale(1);
     pointer-events: auto;
 
     transition:
-        opacity 0.35s ease,
-        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.3s ease,
+        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
         visibility 0s;
 }
 
-.hint-text {
-    position: absolute;
-    top: 140px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255,255,255,0.95);
-    padding: 6px 12px;
-    border-radius: 15px;
-    font-size: 12px;
-    z-index: 23;
-    display: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+/* ===============================
+   MOBILE OVERRIDE ONLY
+   =============================== */
+@media screen and (orientation: portrait) {
+    .route-info {
+        height: 110px;
+        padding: 0 48px;
+        border-radius: 70px;
+    }
+
+    .route-info-text {
+        font-size: 40px;
+        font-weight: 900;
+    }
 }
 
 #routeFromLocation {
@@ -399,7 +405,7 @@ body.route-active .route-info {
 
     
 /* ===============================
-   MOBILE SEARCH / ROUTING GUI — FADE + SCALE TRANSITION
+   MOBILE ROUTING / SEARCH GUI — ANIMATABLE
    =============================== */
 #controls {
     position: fixed !important;
@@ -408,26 +414,31 @@ body.route-active .route-info {
     left: auto !important;
     bottom: auto !important;
 
-    transform: none !important; /* never center */
-    margin: 0 !important;
-
     z-index: 150 !important;
 
-    /* 🔥 ANIMATION */
-    opacity: 1;
-    transform-origin: top right;
+    opacity: 0;
+    transform: scale(0.94);
+    pointer-events: none;
+
     transition:
         opacity 0.35s ease,
         transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* HIDDEN STATE (GPS MODE OR OFF) */
-body.location-mode #controls,
-body.routing-hidden #controls {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.94);
+/* VISIBLE */
+#controls.is-visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
 }
+
+/* GPS MODE HIDES IT */
+body.location-mode #controls {
+    opacity: 0;
+    transform: scale(0.94);
+    pointer-events: none;
+}
+
     
 /* ===============================
    HIDE ROUTING GUI DURING LOCATION MODE
@@ -581,7 +592,10 @@ body.location-mode #controls {
 
 <button id="routeFromLocation">📍 Route from Location</button>
 
-<div id="route-info" class="route-info"></div>
+<div id="route-info" class="route-info">
+    <span class="route-info-text"></span>
+</div>
+
 
 <div class="attribution-text">
     <a href="https://maplibre.org/" target="_blank">MapLibre</a> | 
@@ -860,7 +874,19 @@ mapHybrid.on('load', () => {
 
 function setMobileRoutingVisible(visible) {
     if (!isMobile) return;
-    document.body.classList.toggle('routing-hidden', !visible);
+
+    const controls = document.getElementById('controls');
+    if (!controls) return;
+
+    if (!visible) {
+        controls.classList.remove('is-visible');
+        return;
+    }
+
+    // 🔥 FORCE FIRST FRAME TO COMMIT (THIS IS THE FIX)
+    controls.classList.remove('is-visible');
+    controls.getBoundingClientRect(); // force reflow
+    controls.classList.add('is-visible');
 }
     
 // --- GPS TRACKING ---
@@ -1119,6 +1145,11 @@ function fetchRoute() {
         routeInfo.innerHTML = `<b>${dist} km</b> | ${timeStr}`;
         setRouteInfoVisible(true);
         routeInfo.style.display = 'block';
+
+        document.querySelector('.route-info-text').textContent =
+    `${dist} km | ${timeStr}`;
+
+setRouteInfoVisible(true);
         
         // Animate route info on PC and reposition
         if (!isMobile) {
@@ -1191,14 +1222,18 @@ if (shouldPanToRoute) {
 }
 
 function setRouteInfoVisible(visible) {
-     document.body.classList.remove('route-active');
+    const el = document.getElementById('route-info');
+    if (!el) return;
 
-    if (!visible) return;
+    if (!visible) {
+        el.classList.remove('is-visible');
+        return;
+    }
 
-    // 🔥 FORCE STYLE FLUSH SO FIRST ANIMATION PLAYS
-    void document.body.offsetHeight;
-
-    document.body.classList.add('route-active');
+    // 🔥 FORCE INITIAL STATE TO COMMIT
+    el.classList.remove('is-visible');
+    el.getBoundingClientRect(); // real reflow, element-specific
+    el.classList.add('is-visible');
 }
     
 function addPin(lngLat, isSearch = false) {
