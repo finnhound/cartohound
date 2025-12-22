@@ -14,7 +14,7 @@ html, body { margin:0; height:100%; font-family:'Inter', sans-serif; overflow: h
     top:0; 
     left:0; 
     transition: transform 0.3s ease;
-    contain: strict;
+    contain: layout paint; /* SAFE */
 }
 
 #pan-blocker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; display: none; pointer-events: auto; }
