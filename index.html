@@ -945,7 +945,6 @@ document.getElementById('gpsToggle').onclick = async () => {
     if (isMobile) {
         const blocker = document.getElementById('pan-blocker');
         if (watchId !== null && locationMode) {
-            // Disable location mode
             navigator.geolocation.clearWatch(watchId);
             window.removeEventListener('deviceorientation', handleOrientation);
             watchId = null;
@@ -957,13 +956,12 @@ document.getElementById('gpsToggle').onclick = async () => {
             if (userMarkerStreets) { 
                 userMarkerStreets.remove(); 
                 userMarkerHybrid.remove(); 
-                userMarkerStreets = userMarkerHybrid = null;
             }
+            userMarkerStreets = userMarkerHybrid = null;
             const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-            activeMap.setZoom(activeMap.getZoom()); // keep zoom
+            activeMap.setBearing(0);
             lastHeading = null;
         } else {
-            // Enable location mode
             setLoading(true);
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const res = await DeviceOrientationEvent.requestPermission();
