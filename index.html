@@ -943,9 +943,9 @@ function handleOrientation(event) {
 
 document.getElementById('gpsToggle').onclick = async () => {
     if (isMobile) {
-        // MOBILE: Toggle location lock mode
         const blocker = document.getElementById('pan-blocker');
         if (watchId !== null && locationMode) {
+            // Disable location mode
             navigator.geolocation.clearWatch(watchId);
             window.removeEventListener('deviceorientation', handleOrientation);
             watchId = null;
@@ -957,12 +957,13 @@ document.getElementById('gpsToggle').onclick = async () => {
             if (userMarkerStreets) { 
                 userMarkerStreets.remove(); 
                 userMarkerHybrid.remove(); 
+                userMarkerStreets = userMarkerHybrid = null;
             }
-            userMarkerStreets = userMarkerHybrid = null;
             const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-            activeMap.setBearing(0);
+            activeMap.setZoom(activeMap.getZoom()); // keep zoom
             lastHeading = null;
         } else {
+            // Enable location mode
             setLoading(true);
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const res = await DeviceOrientationEvent.requestPermission();
@@ -973,22 +974,29 @@ document.getElementById('gpsToggle').onclick = async () => {
             setMobileLocationMode(true);
             blocker.style.display = 'block';
             window.addEventListener('deviceorientation', handleOrientation, true);
-            
+
             watchId = navigator.geolocation.watchPosition(pos => {
                 setLoading(false);
                 currentCoords = [pos.coords.longitude, pos.coords.latitude];
                 const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
-                
+
                 if (!userMarkerStreets) {
                     const el1 = document.createElement('div'); el1.innerHTML = arrowSVG;
                     const el2 = document.createElement('div'); el2.innerHTML = arrowSVG;
-                    userMarkerStreets = new maplibregl.Marker({element: el1, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapStreets);
-                    userMarkerHybrid = new maplibregl.Marker({element: el2, rotationAlignment: 'map'}).setLngLat(currentCoords).addTo(mapHybrid);
-                    activeMap.flyTo({center: currentCoords, zoom: 17, duration: 1500});
+
+                    userMarkerStreets = new maplibregl.Marker({element: el1, rotationAlignment: 'map'})
+                        .setLngLat(currentCoords).addTo(mapStreets);
+                    userMarkerHybrid = new maplibregl.Marker({element: el2, rotationAlignment: 'map'})
+                        .setLngLat(currentCoords).addTo(mapHybrid);
+
+                    // 🔹 Zoom to level 15 on first activation
+                    activeMap.flyTo({ center: currentCoords, zoom: 15, duration: 1500 });
                 } else {
                     userMarkerStreets.setLngLat(currentCoords);
                     userMarkerHybrid.setLngLat(currentCoords);
-                    activeMap.panTo(currentCoords, {duration: 500});
+
+                    // 🔹 Pan to user location but keep zoom at 15
+                    activeMap.easeTo({ center: currentCoords, zoom: 15, duration: 500 });
                 }
             }, err => {
                 setLoading(false);
