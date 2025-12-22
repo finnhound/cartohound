@@ -400,7 +400,7 @@ button:active { transform: scale(0.97); }
 }
 
 /* ===============================
-   MOBILE SEARCH / ROUTING GUI — TOP RIGHT
+   MOBILE SEARCH / ROUTING GUI — FADE + SCALE TRANSITION
    =============================== */
 #controls {
     position: fixed !important;
@@ -409,11 +409,27 @@ button:active { transform: scale(0.97); }
     left: auto !important;
     bottom: auto !important;
 
-    transform: none !important; /* 🔥 KILLS CENTERING */
+    transform: none !important; /* never center */
     margin: 0 !important;
 
     z-index: 150 !important;
+
+    /* 🔥 ANIMATION */
+    opacity: 1;
+    transform-origin: top right;
+    transition:
+        opacity 0.35s ease,
+        transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* HIDDEN STATE (GPS MODE OR OFF) */
+body.location-mode #controls,
+body.routing-hidden #controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.94);
+}
+    
 /* ===============================
    HIDE ROUTING GUI DURING LOCATION MODE
    =============================== */
@@ -842,6 +858,11 @@ mapHybrid.on('load', () => {
     document.body.classList.toggle('location-mode', active);
 }
 
+function setMobileRoutingVisible(visible) {
+    if (!isMobile) return;
+    document.body.classList.toggle('routing-hidden', !visible);
+}
+    
 // --- GPS TRACKING ---
 
 let lastHeading = null;
@@ -1603,6 +1624,7 @@ document.getElementById('toggleRoute').onclick = function() {
     const reset = document.getElementById('resetRoute');
     
     if (routingEnabled) {
+        setMobileRoutingVisible(true);
         this.classList.add('active');
         // GUI now works on both PC and Mobile
         mode.style.display = 'block';
@@ -1614,6 +1636,7 @@ document.getElementById('toggleRoute').onclick = function() {
             reset.classList.add('visible');
         });
     } else {
+        setMobileRoutingVisible(false);
         this.classList.remove('active');
         mode.classList.remove('visible');
         reset.classList.remove('visible');
