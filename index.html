@@ -128,7 +128,7 @@ button:active { transform: scale(0.97); }
     color: white;
     padding: 12px 24px; 
     font: bold 15px 'Inter', sans-serif; 
-    z-index: 24; 
+    z-index: 26; 
     border-radius: 25px; 
     display: none;
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
@@ -1850,35 +1850,32 @@ document.getElementById('toggleRoute').onclick = function() {
     const routingType = document.getElementById('routingType');
     
     if (routingEnabled) {
-        routingType.style.display = 'block';
-        void routingType.offsetWidth;
-        routingType.classList.add('visible');
         setMobileRoutingVisible(true);
         this.classList.add('active');
-        // GUI now works on both PC and Mobile
+        
+        // Show routing controls
+        routingType.style.display = 'block';
         mode.style.display = 'block';
         reset.style.display = 'block';
         
         void mode.offsetWidth; // Trigger reflow
         requestAnimationFrame(() => {
+            routingType.classList.add('visible');
             mode.classList.add('visible');
             reset.classList.add('visible');
         });
     } else {
-const routingType = document.getElementById('routingType');
-
-routingType.classList.remove('visible');
-setTimeout(() => {
-    routingType.style.display = 'none';
-}, 350);
-        
         setMobileRouteInfoVisible(false);
         setMobileRoutingVisible(false);
         this.classList.remove('active');
+        
+        // Hide routing controls
+        routingType.classList.remove('visible');
         mode.classList.remove('visible');
         reset.classList.remove('visible');
         
         setTimeout(() => {
+            routingType.style.display = 'none';
             mode.style.display = 'none';
             reset.style.display = 'none';
         }, 350);
@@ -1888,7 +1885,7 @@ setTimeout(() => {
     updateSearchPlaceholder();
     updateRouteFromLocationButton();
 };
-
+    
 document.getElementById('resetRoute').onclick = clearRoute;
 document.getElementById('hybridToggle').onclick = () => showHybrid(currentStyle === 'streets');
 document.getElementById('mode').onchange = () => { 
