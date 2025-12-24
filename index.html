@@ -493,6 +493,11 @@ body.location-mode #controls {
         left: auto !important;
         top: auto !important;
     } 
+
+    #exportGPX {
+    top: 235px;
+}
+    
     #hybridToggle { 
         right: 20px !important; 
         bottom: 20px !important; 
@@ -588,6 +593,14 @@ body.location-mode #controls {
 
 <div id="downloadMap" title="Download Map">
   <svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>
+</div>
+
+    <div id="exportGPX" title="Export GPX">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 17v2h16v-2"/>
+    <path d="M7 9l5-5 5 5"/>
+    <path d="M12 4v11"/>
+  </svg>
 </div>
 
 <div id="toggleRoute" title="Toggle Routing">
@@ -1151,6 +1164,7 @@ function fetchRoute() {
         if (!data.features || data.features.length === 0) return;
         
         const feat = data.features[0];
+        window.lastRouteGeometry = feat.geometry;
         
         // Update Info Box with formatted time
         const dist = (feat.properties.summary.distance / 1000).toFixed(1);
@@ -1217,7 +1231,7 @@ function fetchRoute() {
             return bounds.extend(coord);
         }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
         
-if (shouldPanToRoute) {
+if (shouldPanToRoute && routingMode !== 'trail') {
     activeMap.fitBounds(bounds, {
         padding: isMobile ? 120 : 100,
         duration: 1000
@@ -1325,6 +1339,24 @@ function addPin(lngLat, isSearch = false) {
     addPin(lngLat);
 }
 
+    function snapToRoute(lngLat, routeGeojson) {
+    if (!routeGeojson || !routeGeojson.coordinates) return lngLat;
+
+    let closest = null;
+    let minDist = Infinity;
+
+    for (const c of routeGeojson.coordinates) {
+        const dx = lngLat[0] - c[0];
+        const dy = lngLat[1] - c[1];
+        const d = dx * dx + dy * dy;
+        if (d < minDist) {
+            minDist = d;
+            closest = c;
+        }
+    }
+    return closest || lngLat;
+}
+    
 function addWaypoint(lngLat) {
     const activeMap = currentStyle === 'streets' ? mapStreets : mapHybrid;
     const el = document.createElement('div');
@@ -1348,11 +1380,13 @@ function addWaypoint(lngLat) {
         el.style.background = 'rgba(139, 138, 235, 0.9)'; 
     }
 
-    const wp = new maplibregl.Marker({ 
+    const snapped = snapToRoute(lngLat, window.lastRouteGeometry);
+
+const wp = new maplibregl.Marker({
         element: el, 
         draggable: true,
         anchor: 'center'
-    }).setLngLat(lngLat).addTo(activeMap);
+    })..setLngLat(snapped).addTo(activeMap);
 
     // FIX: Insert point into the array correctly BEFORE the final destination
     const insertIndex = routePoints.length - 1;
@@ -1370,8 +1404,14 @@ function addWaypoint(lngLat) {
         if (isMobile) el.style.opacity = '0.7';
         
         // Recalculate the entire route with updated waypoint positions
-        rebuildRoutePoints();
-        fetchRoute();
+const snapped = snapToRoute(
+    [wp.getLngLat().lng, wp.getLngLat().lat],
+    window.lastRouteGeometry
+);
+wp.setLngLat(snapped);
+
+rebuildRoutePoints();
+fetchRoute();
     });
 
     // CLICK LOGIC: Stop propagation to prevent "double-adding" points on mobile
@@ -1808,6 +1848,37 @@ function updateRouteFromLocationButton() {
         btn.style.display = 'none';
     }
 }
+
+    document.getElementById('exportGPX').onclick = () => {
+    if (!window.lastRouteGeometry) {
+        alert('No route to export');
+        return;
+    }
+
+    const coords = window.lastRouteGeometry.coordinates;
+
+    let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="YourMapApp" xmlns="http://www.topografix.com/GPX/1/1">
+<trk><name>Route</name><trkseg>
+`;
+
+    coords.forEach(c => {
+        gpx += `<trkpt lat="${c[1]}" lon="${c[0]}"></trkpt>\n`;
+    });
+
+    gpx += `</trkseg></trk></gpx>`;
+
+    const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'route.gpx';
+    a.click();
+
+    URL.revokeObjectURL(url);
+};
+
 
 updateRouteFromLocationButton();
 </script>
