@@ -281,16 +281,20 @@ button:active { transform: scale(0.97); }
 }
 
 /* ===============================
-   MOBILE UI (PORTRAIT) — RESTRUCTURED ROUTING GUI
+   MOBILE UI (PORTRAIT) — UPDATED LAYOUT
    =============================== */
 @media screen and (orientation: portrait) {
+
     html, body {
         background: #000;
         overflow: hidden;
     }
 
-    /* Map Scaling */
-    #map-streets, #map-hybrid {
+    /* ===============================
+       MAP — KEEP INTENTIONAL SCALING
+       =============================== */
+    #map-streets,
+    #map-hybrid {
         width: 45.45%;
         height: 45.45%;
         transform: scale(2.2);
@@ -298,119 +302,70 @@ button:active { transform: scale(0.97); }
         position: absolute;
     }
 
-    /* Main Container: Search + Routing Rows */
+/* ===============================
+       UNIFORM HUGE UI — TOP RIGHT
+       =============================== */
     #controls {
-        position: fixed !important;
-        top: 20px !important;
-        right: 20px !important;
-        left: auto !important;
-        width: 480px;
-        max-width: 70vw; 
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        left: auto; 
+        
+        /* Fixed width ensures all children (dropdown/button) match */
+        width: 450px; 
+        max-width: 65vw; 
+        
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        padding: 15px;
+        gap: 15px; /* Consistent spacing between elements */
+        padding: 20px;
         border-radius: 24px;
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(15px);
-        z-index: 150;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        z-index: 100;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.4);
     }
 
-    /* Row 0: Search Bar */
     #searchBox {
-        width: 100% !important;
-        height: 80px !important;
-        font-size: 30px !important;
+        width: 100%; /* Spans full width of #controls */
+        height: 85px; /* Massive height */
+        font-size: 32px !important;
+        padding: 0 25px;
+        border-radius: 16px;
+        border: 2px solid #ddd;
+        box-sizing: border-box; /* Crucial for uniformity */
+    }
+
+    /* DROPDOWN & RESET BUTTON UNIFORMITY */
+    #mode, 
+    #resetRoute {
+        width: 100% !important; /* Forces same width as search bar */
+        height: 75px !important; /* Slightly shorter than search for visual hierarchy */
+        font-size: 28px !important;
+        font-weight: bold;
+        border-radius: 16px;
+        margin: 0; /* Reset margins */
         padding: 0 20px;
-        border-radius: 14px;
-        border: 2px solid #eee;
         box-sizing: border-box;
+        display: none; /* Controlled by .visible in JS */
     }
 
-    /* Row 1: The Toggle Row (Car/Bike/Walk + Classic/Trail) */
-    /* We create a wrapper in the GUI logic or use flex on children */
+    /* Ensure display:block doesn't break the width when visible */
     #mode.visible, 
-    #routingType.visible {
-        display: inline-block !important;
-        width: calc(50% - 6px) !important; /* Half and half with gap consideration */
-        height: 70px !important;
-        font-size: 24px !important;
-        font-weight: 600;
-        border-radius: 14px;
-        border: 1px solid #ddd;
-        padding: 0 10px;
-        margin: 0 !important;
-        box-sizing: border-box;
-        float: left; /* Ensures they sit side-by-side */
-    }
-
-    /* Row 2: Reset Button Row */
     #resetRoute.visible {
         display: block !important;
-        width: 100% !important; /* Full length */
-        height: 75px !important;
-        font-size: 26px !important;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        background: #ff3b30;
-        color: white;
-        border: none;
-        border-radius: 14px;
-        margin-top: 5px !important;
-        box-sizing: border-box;
     }
 
-    /* Search Results scaling */
     #searchResults {
-        top: 105px;
+        top: 115px; /* Adjusted for taller search box */
         width: 100%;
-        border-radius: 14px;
-        font-size: 26px;
-    }
-    .searchItem { padding: 20px; }
-
-    /* Hidden states for GPS mode */
-    body.location-mode #controls,
-    body.routing-hidden #controls {
-        opacity: 0;
-        pointer-events: none;
-        transform: scale(0.95);
+        border-radius: 16px;
     }
 
-    /* Bottom Button Stack (Keep existing Bottom-Right alignment) */
-    #toggleRoute, #gpsToggle, #downloadMap, #hybridToggle {
-        position: fixed !important;
-        right: 20px !important;
-        width: 85px !important;
-        height: 85px !important;
-        z-index: 25 !important;
-        border-radius: 20px !important;
+    .searchItem {
+        padding: 25px;
+        font-size: 28px;
     }
-    #toggleRoute { bottom: 320px !important; }
-    #gpsToggle    { bottom: 220px !important; }
-    #downloadMap  { bottom: 120px !important; }
-    #hybridToggle { bottom: 20px !important; }
-
-    /* Icon scaling */
-    #toggleRoute svg, #gpsToggle svg, #downloadMap svg, #hybridToggle img {
-        width: 45px !important;
-        height: 45px !important;
-    }
-
-    .route-info {
-        position: fixed !important;
-        top: 25px !important;
-        left: 20px !important;
-        font-size: 32px !important;
-        height: 90px;
-        padding: 0 35px;
-        border-radius: 50px;
-        z-index: 160;
-    }
-}
 
 /* ===============================
    MOBILE ROUTE INFO PILL — REAL DISAPPEAR FIX
