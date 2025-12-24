@@ -122,23 +122,26 @@ button:active { transform: scale(0.97); }
     position: absolute;
     top: 15px;
 
-    /* 🔥 LEFT of the controls */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 12px 24px;
-    font: bold 15px 'Inter', sans-serif;
-    z-index: 26;
-    border-radius: 25px;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-    white-space: nowrap;
+    color: #fff !important;
 
-    /* Visibility control */
-    display: block;
+    padding: 12px 24px;
+    font: 600 15px 'Inter', sans-serif;
+
+    border-radius: 25px;
+    box-shadow: 0 6px 20px rgba(102,126,234,0.45);
+
+    white-space: nowrap;
+    z-index: 30;
+
+    /* animation state */
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
 
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
 }
 
 .route-info.visible {
@@ -146,6 +149,7 @@ button:active { transform: scale(0.97); }
     transform: translateY(0);
     pointer-events: auto;
 }
+
 
 .hint-text {
     position: absolute;
@@ -431,7 +435,7 @@ body.route-active .route-info {
 }
 
 #routingType,
-#mode { 
+#mode {
     flex: 1;
     width: auto !important;
     height: 75px !important;
@@ -441,7 +445,14 @@ body.route-active .route-info {
     margin: 0;
     padding: 0 20px;
     box-sizing: border-box;
+
+    /* 🔥 controlled ONLY by .visible */
     display: none;
+}
+
+#routingType.visible,
+#mode.visible {
+    display: block !important;
 }
     
 /* ===============================
@@ -718,17 +729,31 @@ routingEnabled = false;
 localStorage.setItem('mapRouteEnabled', 'false');
 
 // PC-specific: Setup sliding controls
+
+    if (!isMobile) {
+    const controls = document.getElementById('controls');
+
+    controls.style.left = 'auto';
+    controls.style.right = '90px';
+    controls.style.top = '15px';
+    controls.style.transform = 'none';
+
+    controls.style.transition =
+        'opacity 0.35s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)';
+}
+    
 if (!isMobile) {
     const controls = document.getElementById('controls');
     const routeInfo = document.getElementById('route-info');
 
-    function positionRouteInfo() {
-        const c = controls.getBoundingClientRect();
+function positionRouteInfo() {
+    if (!routeInfo.classList.contains('visible')) return;
 
-        // 🔥 place route-info LEFT of controls
-        routeInfo.style.left =
-            (c.left - routeInfo.offsetWidth - 16) + 'px';
-    }
+    const c = controls.getBoundingClientRect();
+    const width = routeInfo.getBoundingClientRect().width;
+
+    routeInfo.style.left = (c.left - width - 16) + 'px';
+}
 
     window.addEventListener('resize', positionRouteInfo);
 
