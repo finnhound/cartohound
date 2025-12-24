@@ -401,37 +401,60 @@ button:active { transform: scale(0.97); }
        MOBILE ROUTE INFO PILL
        =============================== */
     .route-info {
+        /* Position at Bottom Middle */
         position: fixed !important;
-        top: 20px !important;
-        left: 20px !important;
-        font-size: 40px !important;
-        font-weight: 900;
-        color: white;
-        height: 110px;
-        padding: 0 48px;
-        border-radius: 70px;
+        bottom: 30px !important; /* Distance from bottom edge */
+        top: auto !important;    /* Reset the top position from PC/previous styles */
+        left: 50% !important;
+        transform: translateX(-50%) scale(0.92); /* Horizontal center + hide scale */
+        
+        /* Thin Pill Shape */
+        height: 60px !important; /* Low height for "Thin" look */
+        padding: 0 40px !important;
+        border-radius: 50px !important; /* Full rounded ends */
+        
+        /* Large Text Styling */
+        font-size: 34px !important; /* Massive text */
+        font-weight: 800;
+        letter-spacing: -1px;
+        line-height: 60px !important; /* Matches height to center text vertically */
+        
+        /* Layout & Aesthetics */
         display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
+        align-items: center;
+        justify-content: center;
         white-space: nowrap;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        box-shadow: 0 12px 45px rgba(0,0,0,0.65);
-        z-index: 160;
+        z-index: 1000 !important; /* Stay above map and other buttons */
+        
+        /* Colors & Effects */
+        background: rgba(20, 20, 20, 0.9) !important; /* Dark sleek pill */
+        color: white !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.2);
+
+        /* Animation States */
         opacity: 0;
         visibility: hidden;
-        transform: scale(0.92);
         pointer-events: none;
-        transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.35s;
+        transition: 
+            opacity 0.3s ease, 
+            transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+            visibility 0s linear 0.3s;
     }
 
+    /* Show State when Route is Active */
     body.route-active .route-info {
         opacity: 1;
         visibility: visible;
-        transform: scale(1);
+        transform: translateX(-50%) scale(1); /* Return to full size */
         pointer-events: auto;
-        transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+        transition: 
+            opacity 0.3s ease, 
+            transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+            visibility 0s;
     }
+}
 
     /* HIDDEN STATES */
     body.location-mode #controls { display: none !important; }
